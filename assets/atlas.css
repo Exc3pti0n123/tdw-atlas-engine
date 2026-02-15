@@ -1,0 +1,77 @@
+/* ============================================================
+   TDW Atlas Engine — atlas.css (MVP)
+   ------------------------------------------------------------
+   Uses TDW design tokens from tdw-site-core if present.
+   Falls back gracefully if tokens are missing.
+   Dark-mode ready automatically via token switching in site-core.
+   ============================================================ */
+
+/* Base atlas container (the shortcode renders .tdw-atlas) */
+.tdw-atlas {
+  position: relative;
+  width: 100%;
+  /* Height comes from inline style on the shortcode for MVP (e.g. 70vh). */
+  overflow: hidden;
+
+  /* Optional: give it a subtle frame matching the design system */
+  background: var(--tdw-card, #ffffff);
+  border: 1px solid var(--tdw-border, rgba(0, 0, 0, 0.15));
+}
+
+/* If Leaflet creates internal panes, ensure they fill the container */
+.tdw-atlas .leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+/* ============================================================
+   Error UI (rendered by shortcode when config/id is missing)
+   ============================================================ */
+
+.tdw-atlas-error {
+  box-sizing: border-box;
+  width: 100%;
+
+  padding: 1rem;
+  border: 1px solid var(--tdw-border, rgba(0, 0, 0, 0.2));
+  border-left-width: 4px;
+
+  /* Use brand accent as “attention” for now; can be swapped later to a dedicated --tdw-danger token */
+  border-left-color: var(--tdw-water, #3C9FAE);
+
+  color: var(--tdw-text, #1D1A16);
+  background: color-mix(in srgb, var(--tdw-water, #3C9FAE) 10%, var(--tdw-card, #ffffff));
+
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.tdw-atlas-error strong {
+  font-family: var(--tdw-font-heading, inherit);
+  font-weight: 700;
+}
+
+.tdw-atlas-error code {
+  font-family: inherit;
+  background: color-mix(in srgb, var(--tdw-text, #1D1A16) 6%, transparent);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+}
+
+.tdw-atlas-error a {
+  color: var(--tdw-water, #3C9FAE);
+  text-decoration: underline;
+}
+
+.tdw-atlas-error a:hover,
+.tdw-atlas-error a:focus-visible {
+  color: var(--tdw-water-hover, #2F8A97);
+}
+
+/* Better focus outline for any interactive elements inside atlas */
+.tdw-atlas :is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--tdw-water, #3C9FAE);
+  outline-offset: 2px;
+}

@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "engine": "tdw-atlas-engine",
+    "version": "0.1.0"
+  },
+
+  "debug": true,
+
+  "maps": {
+    "world": {
+      "geojson": "data/ne_50m_admin_0_countries_lakes.json",
+      "view": "world"
+    }
+  },
+
+  "views": {
+    "world": {
+      "bounds": [[-60, -180], [85, 180]]
+    }
+  },
+
+  "vendor": {
+    "leafletJs": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet-src.js",
+    "leafletCss": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet.css"
+  }
+}
