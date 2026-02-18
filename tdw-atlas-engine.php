@@ -2,19 +2,33 @@
 /**
  * Plugin Name: TDW – Atlas Engine
  * Description: Minimal atlas plugin (Leaflet + TDW Atlas boot) for rendering GeoJSON maps via shortcode.
- * Version: 0.1.1
+ * Version: 0.1.2
  * Author: Justin Errica
  */
 
 if (!defined('ABSPATH')) exit;
 
+const TDW_ATLAS_PLUGIN_VERSION = '0.1.2';
+const TDW_ATLAS_DB_SCHEMA_VERSION = 1;
+const TDW_ATLAS_OPTION_SETTINGS = 'tdw_atlas_settings';
+const TDW_ATLAS_OPTION_SYSTEM = 'tdw_atlas_system';
+const TDW_ATLAS_PLUGIN_FILE = __FILE__;
+
 /* ============================================================
    Helpers
    ============================================================ */
 
-function tdw_atlas_asset_ver($abs_path, $fallback = '0.1.0') {
+function tdw_atlas_asset_ver($abs_path, $fallback = '0.1.2') {
   return file_exists($abs_path) ? (string) filemtime($abs_path) : $fallback;
 }
+
+require_once plugin_dir_path(__FILE__) . 'includes/atlas-runtime-config.php';
+require_once plugin_dir_path(__FILE__) . 'includes/atlas-db.php';
+require_once plugin_dir_path(__FILE__) . 'includes/atlas-rest.php';
+
+register_activation_hook(__FILE__, 'tdw_atlas_activate');
+add_action('init', 'tdw_atlas_maybe_upgrade');
+add_action('rest_api_init', 'tdw_atlas_register_rest_routes');
 
 /* ============================================================
    Enqueue (Leaflet + shared + Atlas scripts)
@@ -31,18 +45,20 @@ function tdw_atlas_enqueue_vendor_leaflet() {
   $css_file = $base_path . 'leaflet.css';
 
   // Leaflet CSS
-  wp_enqueue_style(
-    'tdw-atlas-vendor-leaflet',
-    $base_url . 'leaflet.css',
-    array(),
-    file_exists($css_file) ? filemtime($css_file) : '2.0.0-alpha'
-  );
+  if (!wp_style_is('tdw-atlas-vendor-leaflet', 'enqueued') && !wp_style_is('tdw-atlas-vendor-leaflet', 'done')) {
+    wp_enqueue_style(
+      'tdw-atlas-vendor-leaflet',
+      $base_url . 'leaflet.css',
+      array(),
+      file_exists($css_file) ? filemtime($css_file) : '2.0.0-alpha'
+    );
+  }
 
   // Leaflet JS - module lazy via import() in adapter
 
 }
 
-//Enqueue shared files (temporary)
+// Enqueue shared modules
 
 function tdw_shared_enqueue_assets() {
   $base_dir = plugin_dir_path(__FILE__);
@@ -53,7 +69,6 @@ function tdw_shared_enqueue_assets() {
   $tdw_bridge_abs = $base_dir . $tdw_bridge_rel;
   $tdw_logger_rel = 'assets/shared/tdw-logger.js';
   $tdw_logger_abs = $base_dir . $tdw_logger_rel;
-
 
   wp_enqueue_script_module(
     'tdw-bridge',
@@ -73,7 +88,7 @@ function tdw_shared_enqueue_assets() {
 
 }
 
-//Enqueue Atlas files
+// Enqueue Atlas files
 
 function tdw_atlas_enqueue_assets() {
   $base_dir = plugin_dir_path(__FILE__);
@@ -90,31 +105,17 @@ function tdw_atlas_enqueue_assets() {
   );
 
   // Atlas scripts
-//  $atlas_debug_rel = 'assets/js/atlas-debug.js';
   $atlas_api_rel   = 'assets/js/atlas-api.js';
   $atlas_core_rel  = 'assets/js/atlas-core.js';
   $atlas_leaflet_rel = 'assets/js/atlas-leaflet.js';
   $atlas_cookie_ops_rel = 'assets/js/helpers/atlas-cookie-ops.js';
   $atlas_boot_rel = 'assets/js/atlas-boot.js';
 
- // $atlas_debug_abs = $base_dir . $atlas_debug_rel;
   $atlas_api_abs   = $base_dir . $atlas_api_rel;
   $atlas_core_abs  = $base_dir . $atlas_core_rel;
   $atlas_leaflet_abs = $base_dir . $atlas_leaflet_rel;
   $atlas_cookie_ops_abs = $base_dir . $atlas_cookie_ops_rel;
   $atlas_boot_abs = $base_dir . $atlas_boot_rel;
-
-  // Enqueue debug script only if debug cookie is enabled
-/*  if (!empty($_COOKIE['tdw_atlas_debug']) && $_COOKIE['tdw_atlas_debug'] === '1') {
-    wp_enqueue_script_module(
-      'tdw-atlas-debug',
-      $base_url . $atlas_debug_rel,
-      array(),
-      tdw_atlas_asset_ver($atlas_debug_abs),
-      ['in_footer' => true]
-    );
-  }
- */   
 
   wp_enqueue_script_module(
     'tdw-atlas-cookie-ops',
@@ -162,19 +163,6 @@ function tdw_atlas_enqueue_assets() {
     tdw_atlas_asset_ver($atlas_boot_abs),
     ['in_footer' => true]
   );
-
-  // Expose plugin base URL + config URL for JS
-  $config_rel = 'atlas.config.json';
-  $config_abs = $base_dir . $config_rel;
-  wp_add_inline_script(
-    'tdw-atlas-core',
-    'window.TDW_ATLAS_BOOT = window.TDW_ATLAS_BOOT || {}; ' .
-    'window.TDW_ATLAS_BOOT.baseUrl=' . wp_json_encode($base_url) . ';' .
-    'window.TDW_ATLAS_BOOT.configUrl=' . wp_json_encode($base_url . $config_rel) . ';' .
-    'window.TDW_ATLAS_BOOT.hasConfig=' . wp_json_encode(file_exists($config_abs)) . ';' .
-    'window.TDW_ATLAS_BOOT.pluginVersion=' . wp_json_encode('0.1.0') . ';',
-    'before'
-  );
 }
 // TODO: For MVP, assets are enqueued only when the shortcode renders.
 // In the future, we need a global loader for global functions / admin UI, etc.
@@ -195,7 +183,7 @@ function tdw_atlas_enqueue_frontend_assets_once() {
 
 /* ============================================================
    Shortcode: [tdw_atlas id="world"]
-   - Renders a div container for a map instance defined in atlas.config.json under "maps".
+   - Renders a div container for a map instance resolved by runtime config under "maps".
    - Only "id" (required) is accepted.
    ============================================================ */
 
@@ -203,19 +191,22 @@ function tdw_atlas_shortcode($atts = array()) {
   $atts = shortcode_atts(array(
     'id' => '',
   ), $atts, 'tdw_atlas');
-  
-  tdw_atlas_enqueue_frontend_assets_once();
 
   $plugin_url  = plugin_dir_url(__FILE__);
-  $config_url  = $plugin_url . 'atlas.config.json';
+  $config_url  = rest_url('tdw-atlas/v1/config');
 
   // Minimal contract: PHP does not validate config or map ids.
   // Boot is responsible for loading config and rendering user-facing errors.
   $map_id = trim((string) $atts['id']);
 
-  // If no id is provided, render nothing (Boot cannot target a container reliably).
+  // Always enqueue runtime assets so Boot can resolve runtime errors in-container.
+  tdw_atlas_enqueue_frontend_assets_once();
+
+  // If no id is provided, render a placeholder atlas container.
+  // Boot will replace this with a visible fatal error ("Missing map id").
   if ($map_id === '') {
-    return '';
+    $missing_id = 'tdw-atlas-missing-' . wp_generate_uuid4();
+    return '<div class="tdw-atlas tdw-atlas-loading" id="' . esc_attr($missing_id) . '" data-tdw-atlas="1" data-config-url="' . esc_url($config_url) . '"><div class="tdw-map-loading">Loading map...</div></div>';
   }
 
   $container_id = 'tdw-atlas-' . sanitize_html_class($map_id);

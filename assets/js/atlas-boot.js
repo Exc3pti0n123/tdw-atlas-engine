@@ -7,7 +7,7 @@
    Responsibilities:
    - Wait for DOM ready.
    - Discover Atlas containers (`.tdw-atlas[data-tdw-atlas="1"]`).
-   - Load shared `atlas.config.json` once.
+   - Load runtime config from `data-config-url` once.
    - Enable/disable debug logging based on config.debug (Contract 4).
    - For each container: resolve map + view, load GeoJSON, create Core instance,
      and call `core.init({ adapter, el, config, geojson })`.
@@ -81,7 +81,7 @@ function getBootDebugState() {
 }
 
 /**
- * Loads atlas.config.json (shared config) from a URL.
+ * Loads runtime config from a URL.
  *
  * @param {string} url Absolute URL (from data-config-url).
  * @returns {Promise<object|null>} Parsed config object.
@@ -97,7 +97,7 @@ async function loadAtlasConfig(url) {
     }
 
     const json = await res.json();
-    dlog('Loaded atlas.config.json.', { url });
+    dlog('Loaded runtime config.', { url });
     return json;
   } catch (err) {
     derror(null, 'Failed to load config (network/parse error).', { url, err });
@@ -161,7 +161,7 @@ async function bootOne(el, createCore, shared) {
   }
 
   if (!config) {
-    derror(el, 'Missing atlas config (atlas.config.json could not be loaded).');
+    derror(el, 'Missing runtime config (could not be loaded).');
     return;
   }
 
@@ -178,7 +178,11 @@ async function bootOne(el, createCore, shared) {
 
   let geojsonUrl;
   try {
-    geojsonUrl = new URL(geojsonRel, configUrl).href;
+    const configBaseUrl = config?.meta?.baseUrl;
+    const geojsonBase = typeof configBaseUrl === 'string' && configBaseUrl
+      ? configBaseUrl
+      : configUrl;
+    geojsonUrl = new URL(geojsonRel, geojsonBase).href;
   } catch (e) {
     derror(el, `Invalid geojson URL for map id: ${mapId}.`);
     return;
@@ -216,7 +220,7 @@ async function bootOne(el, createCore, shared) {
 
 /**
  * PRE-BOOT
- * - Load shared atlas.config.json (once)
+ * - Load shared runtime config (once)
  * - Set debug enablement from config.debug
  *
  * @returns {Promise<{config: object|null, configUrl: string}|null>}
@@ -252,7 +256,7 @@ async function preBoot() {
 
     syncDebugCookie(config.debug);
   } else {
-    derror(null, 'atlas.config.json missing valid boolean debug flag.', { configUrl, debug: config?.debug });
+    derror(null, 'Runtime config missing valid boolean debug flag.', { configUrl, debug: config?.debug });
   }
 
   return { config, configUrl };

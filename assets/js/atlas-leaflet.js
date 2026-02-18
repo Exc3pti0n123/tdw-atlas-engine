@@ -27,7 +27,7 @@
    - destroy()
 
    Logging
-   - log / warn must route through window.TDW.Atlas._logger (if present).
+   - log / warn must route through window.TDW._logger (if present).
    - error must use console.error directly.
 
    Contract 3 (File Structure),
@@ -314,7 +314,5 @@ if (typeof api?.registerAdapter === 'function') {
   api.registerAdapter('leaflet', Adapter);
   dlog('Leaflet adapter registered via API.');
 } else {
-  window.TDW.Atlas._pendingAdapters = window.TDW.Atlas._pendingAdapters || {};
-  window.TDW.Atlas._pendingAdapters.leaflet = Adapter;
-  dwarn('Leaflet adapter stored in pending adapters (API not ready).');
+  derror(null, 'Leaflet adapter registration failed: API.registerAdapter not available (strict dependency contract violated).');
 }

@@ -27,13 +27,12 @@ If you change a contract, update this file and bump the plugin version.
 - Renders exactly one Atlas container element into the page.
 
 ### Attributes (shortcode)
-- `id` **(required)**: map instance id; must match a key in `atlas.config.json` under `maps`.
+- `id` **(required)**: map instance id; must match a key in effective runtime config under `maps`.
 
 ### Failure behavior
-- Missing `id` => shortcode returns an empty string (no atlas container is rendered).
+- Missing `id` => shortcode renders a placeholder atlas container; Boot resolves a visible in-container runtime error.
 - Unknown `id` (not in config) => PHP still renders the container; Boot renders the runtime error in-container.
 - No fallback ids.
-- If no container is rendered, any visual fallback/placeholder is the responsibility of the surrounding page/template.
 
 ---
 
@@ -47,7 +46,7 @@ If you change a contract, update this file and bump the plugin version.
 - `class`: includes `tdw-atlas`
 - `data-tdw-atlas="1"` (presence marker)
 - `data-map-id` (string): must match the shortcode `id`
-- `data-config-url` (absolute URL): URL to `atlas.config.json`
+- `data-config-url` (absolute URL): URL to effective runtime config endpoint
 
 ### Optional attributes (future)
 - `data-view` (string): view preset id (example: `world`)
@@ -82,15 +81,15 @@ Notes:
 - AUTO-RUN must be the only place that registers event listeners or starts orchestration.
 - Functions in section `2) FUNCTIONS` should use JSDoc (`@param`, `@returns`) for non-trivial behavior.
 
-## Contract 4 — Config File (atlas.config.json)
+## Contract 4 — Config Source (JSON bootstrap + DB-backed runtime)
 
-### Location
+### Bootstrap location
 - Plugin root: `tdw-atlas-engine/atlas.config.json`
 
 ### Minimal schema (MVP)
 ```json
 {
-  "meta": { "engine": "tdw-atlas-engine", "version": "0.1.0" },
+  "meta": { "engine": "tdw-atlas-engine", "version": "0.1.2" },
   "debug": true,
   "vendor": {
     "leafletJs": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet-src.js",
@@ -107,8 +106,15 @@ Notes:
 
 ### Rules
 - `debug` is the single authoritative source for whether debug should be enabled.
-- `maps.{id}.geojson` is a **relative path** inside the plugin; Boot resolves it relative to `data-config-url`.
+- Runtime config is served via `/wp-json/tdw-atlas/v1/config` (effective config from DB with JSON fallback).
+- `maps.{id}.geojson` is typically a relative path inside the plugin; Boot resolves it relative to `meta.baseUrl` (fallback: `data-config-url`).
 - `views.{viewId}.bounds` is optional but recommended for predictable fit.
+
+### PHP implementation ownership
+- `tdw-atlas-engine.php`: plugin bootstrap, constants, hooks, enqueue, shortcode.
+- `includes/atlas-runtime-config.php`: runtime config assembly (JSON defaults + DB effective config).
+- `includes/atlas-db.php`: DB table/schema, seeding, activation/upgrade lifecycle.
+- `includes/atlas-rest.php`: route registration for config endpoint.
 
 ---
 
@@ -176,7 +182,7 @@ Fatal errors must:
 - Each module scope can be enabled/disabled independently.
 - Debug state may be initialized by:
   - Cookie
-  - `atlas.config.json`
+  - runtime config from `data-config-url`
 - Manual runtime call (`setDebugEnabled(scope, boolean)`)
 
 The logger itself is framework-agnostic and does not contain Atlas-specific logic.
@@ -185,7 +191,7 @@ The logger itself is framework-agnostic and does not contain Atlas-specific logi
 
 - `tdw-logger` initializes logger functions and scope state (shared dependency, eager enqueued).
 - `atlas-cookie-ops` may apply early log enablement from `tdw_atlas_debug` cookie before Boot starts.
-- `atlas-boot` loads `atlas.config.json` and applies final state from `config.debug` (authoritative).
+- `atlas-boot` loads effective config from `data-config-url` and applies final state from `config.debug` (authoritative).
 - `atlas-boot` synchronizes `tdw_atlas_debug` cookie to the applied `config.debug` value.
 - Hysteresis is expected across reloads:
   - Cookie can make early logs visible for the current request.
@@ -213,6 +219,11 @@ All public plugin JS attaches under:
 
 ### Forbidden
 - No other top-level globals
+- No legacy globals like `window.TDW_ATLAS_BOOT`
+
+### Namespace rule
+- Module code may initialize `window.TDW` / `window.TDW.Atlas` idempotently.
+- Public runtime surface must remain inside `window.TDW.*`.
 
 ---
 
@@ -281,7 +292,7 @@ Adapters must implement:
 
 ### Responsibilities
 - Find all `.tdw-atlas[data-tdw-atlas="1"]` containers.
-- Load `atlas.config.json` once (shared across instances).
+- Load effective config once (shared across instances).
 - Apply debug enablement from `config.debug` (authoritative source).
 - Sync cookie `tdw_atlas_debug` to the applied debug state.
 - For each container:
@@ -296,40 +307,20 @@ Adapters must implement:
 ---
 
 
-## Contract 12 — DEBUGGING Skript - deactivated
+## Contract 12 — Archived Debug Script (non-runtime)
 
 ### Location
 - `assets/js/atlas-debug.js.old`
 
 ### Purpose
-- Centralized logging and diagnostics module.
-- Must never affect runtime behavior of Core, API, Boot, or Adapters.
+- Historical reference only.
+- Not part of active runtime/module graph.
 
 ### Load Behavior
-- Enqueued by PHP **only if** the `tdw_atlas_debug` cookie is `"1"`.
-- Must rely on the shared logger `window.TDW._logger` (defined in tdw-logger.js).
-- Must not auto-mutate global state.
+- Not enqueued in current architecture.
 
-### Public Surface
-
-- Must not redefine the logger.
-- May extend diagnostics (namespace checks, token checks).
-- Must use `window.TDW._logger` for all logging.
-
-### Invocation Rules
-
-- All logging is routed through `window.TDW._logger`
-- The logger itself handles console fallback behavior
-
-### Execution Contract
-
-- Debug must be safe if loaded before or after other modules.
-- Debug must not assume that:
-  - API is already loaded
-  - Core is already loaded
-  - Adapters are already registered
-
-- If debug script is not loaded, the system must behave identically except for missing log output.
+### Rule
+- Keep as archive or delete later; do not treat it as a current contract source.
 
 ---
 
@@ -392,7 +383,7 @@ When we add a visible attribution UI, it must support:
 - Default attributes: `path=/`, `sameSite=Lax`, `secure` when HTTPS.
 - CookieOps may call `window.TDW._logger.setDebugEnabled(...)` to apply early log state from cookie.
 - Cookie debug init may enable early runtime logs before config is loaded.
-- Runtime debug authority remains `atlas.config.json`; Boot may sync that value back into cookie.
+- Runtime debug authority remains effective runtime config; Boot may sync that value back into cookie.
 
 ### Shared Bridge
 
@@ -429,9 +420,11 @@ Required dependency graph for predictable logging and runtime:
 
 Rules:
 
+- For static/startup-critical modules, this PHP dependency graph is the authoritative load order.
 - `tdw-atlas-cookie-ops` must run before API/Core/Leaflet to allow early logging from cookie state.
 - `tdw-atlas-boot` must run last to apply authoritative config and start orchestration.
 - Any new module that emits `dlog`/`dwarn` during module evaluation must depend on `tdw-logger` and `tdw-atlas-cookie-ops`.
+- Dynamic import authority is owned by explicit `import()` call sites (currently Leaflet adapter for Leaflet vendor module).
 - Initiators:
   - PHP enqueue initiates shared + atlas module loading.
   - `tdw-bridge` initiates eager shared vendor contracts.
