@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TDW – Atlas Engine
  * Description: Minimal atlas plugin (Leaflet + TDW Atlas boot) for rendering GeoJSON maps via shortcode.
- * Version: 0.1.0
+ * Version: 0.1.1
  * Author: Justin Errica
  */
 
@@ -17,7 +17,7 @@ function tdw_atlas_asset_ver($abs_path, $fallback = '0.1.0') {
 }
 
 /* ============================================================
-   Enqueue (Leaflet + Atlas scripts)
+   Enqueue (Leaflet + shared + Atlas scripts)
    ============================================================ */
 
 //Enqueue vendored Leaflet 2.0.0-alpha (local vendor copy)
@@ -42,6 +42,37 @@ function tdw_atlas_enqueue_vendor_leaflet() {
 
 }
 
+//Enqueue shared files (temporary)
+
+function tdw_shared_enqueue_assets() {
+  $base_dir = plugin_dir_path(__FILE__);
+  $base_url = plugin_dir_url(__FILE__);
+
+  // Shared modules: tdw-bridge.js + tdw-logger.js
+  $tdw_bridge_rel = 'assets/shared/tdw-bridge.js';
+  $tdw_bridge_abs = $base_dir . $tdw_bridge_rel;
+  $tdw_logger_rel = 'assets/shared/tdw-logger.js';
+  $tdw_logger_abs = $base_dir . $tdw_logger_rel;
+
+
+  wp_enqueue_script_module(
+    'tdw-bridge',
+    $base_url . $tdw_bridge_rel,
+    array(),
+    tdw_atlas_asset_ver($tdw_bridge_abs),
+    ['in_footer' => true]
+  );
+
+  wp_enqueue_script_module(
+    'tdw-logger',
+    $base_url . $tdw_logger_rel,
+    array('tdw-bridge'),
+    tdw_atlas_asset_ver($tdw_logger_abs),
+    ['in_footer' => true]
+  );
+
+}
+
 //Enqueue Atlas files
 
 function tdw_atlas_enqueue_assets() {
@@ -59,69 +90,78 @@ function tdw_atlas_enqueue_assets() {
   );
 
   // Atlas scripts
-  $atlas_debug_rel = 'assets/js/atlas-debug.js';
+//  $atlas_debug_rel = 'assets/js/atlas-debug.js';
   $atlas_api_rel   = 'assets/js/atlas-api.js';
   $atlas_core_rel  = 'assets/js/atlas-core.js';
   $atlas_leaflet_rel = 'assets/js/atlas-leaflet.js';
+  $atlas_cookie_ops_rel = 'assets/js/helpers/atlas-cookie-ops.js';
   $atlas_boot_rel = 'assets/js/atlas-boot.js';
 
-  $atlas_debug_abs = $base_dir . $atlas_debug_rel;
+ // $atlas_debug_abs = $base_dir . $atlas_debug_rel;
   $atlas_api_abs   = $base_dir . $atlas_api_rel;
   $atlas_core_abs  = $base_dir . $atlas_core_rel;
   $atlas_leaflet_abs = $base_dir . $atlas_leaflet_rel;
+  $atlas_cookie_ops_abs = $base_dir . $atlas_cookie_ops_rel;
   $atlas_boot_abs = $base_dir . $atlas_boot_rel;
 
   // Enqueue debug script only if debug cookie is enabled
-  if (!empty($_COOKIE['tdw_atlas_debug']) && $_COOKIE['tdw_atlas_debug'] === '1') {
-    wp_enqueue_script(
+/*  if (!empty($_COOKIE['tdw_atlas_debug']) && $_COOKIE['tdw_atlas_debug'] === '1') {
+    wp_enqueue_script_module(
       'tdw-atlas-debug',
       $base_url . $atlas_debug_rel,
       array(),
       tdw_atlas_asset_ver($atlas_debug_abs),
-      true
+      ['in_footer' => true]
     );
-    wp_script_add_data('tdw-atlas-debug', 'type', 'module');
   }
+ */   
 
-  wp_enqueue_script(
+  wp_enqueue_script_module(
+    'tdw-atlas-cookie-ops',
+    $base_url . $atlas_cookie_ops_rel,
+    array('tdw-bridge', 'tdw-logger'),
+    tdw_atlas_asset_ver($atlas_cookie_ops_abs),
+    ['in_footer' => true]
+  );
+
+  wp_enqueue_script_module(
     'tdw-atlas-api',
     $base_url . $atlas_api_rel,
-    array(),
+    array('tdw-logger', 'tdw-atlas-cookie-ops'),
     tdw_atlas_asset_ver($atlas_api_abs),
-    true
+    ['in_footer' => true]
   );
-  wp_script_add_data('tdw-atlas-api', 'type', 'module');
 
-  wp_enqueue_script(
+  wp_enqueue_script_module(
     'tdw-atlas-core',
     $base_url . $atlas_core_rel,
-    array('tdw-atlas-api'),
+    array('tdw-atlas-api', 'tdw-logger', 'tdw-atlas-cookie-ops'),
     tdw_atlas_asset_ver($atlas_core_abs),
-    true
+    ['in_footer' => true]
   );
-  wp_script_add_data('tdw-atlas-core', 'type', 'module');
 
-  wp_enqueue_script(
+  wp_enqueue_script_module(
     'tdw-atlas-leaflet',
     $base_url . $atlas_leaflet_rel,
-    array('tdw-atlas-api'),
+    array('tdw-atlas-api', 'tdw-logger', 'tdw-atlas-cookie-ops'),
     tdw_atlas_asset_ver($atlas_leaflet_abs),
-    true
+    ['in_footer' => true]
   );
-  wp_script_add_data('tdw-atlas-leaflet', 'type', 'module');
 
-  wp_enqueue_script(
+  wp_enqueue_script_module(
     'tdw-atlas-boot',
     $base_url . $atlas_boot_rel,
     array(
       'tdw-atlas-api',
       'tdw-atlas-core',
-      'tdw-atlas-leaflet'
+      'tdw-atlas-leaflet',
+      'tdw-atlas-cookie-ops',
+      'tdw-logger',
+      'tdw-bridge'
     ),
     tdw_atlas_asset_ver($atlas_boot_abs),
-    true
+    ['in_footer' => true]
   );
-  wp_script_add_data('tdw-atlas-boot', 'type', 'module');
 
   // Expose plugin base URL + config URL for JS
   $config_rel = 'atlas.config.json';
@@ -149,50 +189,35 @@ function tdw_atlas_enqueue_frontend_assets_once() {
   if ($done) return;
   $done = true;
   tdw_atlas_enqueue_vendor_leaflet();
+  tdw_shared_enqueue_assets();
   tdw_atlas_enqueue_assets();
 }
 
 /* ============================================================
-   Shortcode: [tdw_atlas id="world" height="70vh"]
+   Shortcode: [tdw_atlas id="world"]
    - Renders a div container for a map instance defined in atlas.config.json under "maps".
-   - Only "id" (required) and "height" (optional) are accepted.
+   - Only "id" (required) is accepted.
    ============================================================ */
 
 function tdw_atlas_shortcode($atts = array()) {
   $atts = shortcode_atts(array(
     'id' => '',
-    'height' => '70vh',
   ), $atts, 'tdw_atlas');
   
   tdw_atlas_enqueue_frontend_assets_once();
 
-  $plugin_url = plugin_dir_url(__FILE__);
-  $config_path = plugin_dir_path(__FILE__) . 'atlas.config.json';
-  $config_url = $plugin_url . 'atlas.config.json';
+  $plugin_url  = plugin_dir_url(__FILE__);
+  $config_url  = $plugin_url . 'atlas.config.json';
 
-  // Load and parse config
-  if (!file_exists($config_path)) {
-    return '<div class="tdw-atlas-error">TDW Atlas Error: atlas.config.json is missing or invalid.</div>';
-  }
-  $config_raw = file_get_contents($config_path);
-  $config = json_decode($config_raw, true);
-  if (!is_array($config) || empty($config['maps']) || !is_array($config['maps'])) {
-    return '<div class="tdw-atlas-error">TDW Atlas Error: atlas.config.json is missing or invalid.</div>';
-  }
+  // Minimal contract: PHP does not validate config or map ids.
+  // Boot is responsible for loading config and rendering user-facing errors.
+  $map_id = trim((string) $atts['id']);
 
-  $map_id = trim($atts['id']);
+  // If no id is provided, render nothing (Boot cannot target a container reliably).
   if ($map_id === '') {
-    return '<div class="tdw-atlas-error">TDW Atlas Error: No map ID provided. Example: [tdw_atlas id="world"]</div>';
+    return '';
   }
-  if (!array_key_exists($map_id, $config['maps'])) {
-    return '<div class="tdw-atlas-error">TDW Atlas Error: Map ID "' . esc_html($map_id) . '" not found in atlas.config.json.</div>';
-  }
-  $map = $config['maps'][$map_id];
-  if (empty($map['geojson'])) {
-    return '<div class="tdw-atlas-error">TDW Atlas Error: Map "' . esc_html($map_id) . '" has no geojson in atlas.config.json.</div>';
-  }
-  $geojson_url = esc_url($plugin_url . ltrim($map['geojson'], '/'));
-  $height = $atts['height'];
+
   $container_id = 'tdw-atlas-' . sanitize_html_class($map_id);
 
   /*
@@ -201,26 +226,16 @@ function tdw_atlas_shortcode($atts = array()) {
    * - id="tdw-atlas-<map_id>"
    * - data-tdw-atlas (presence indicates an atlas container)
    * - data-map-id (string)
-   * - data-geojson-url (absolute URL)
    * - data-config-url (absolute URL)
-   * - optional: data-view, data-preset
-   * - inline style must set width + height
+   * - optional: data-view, data-preset (future)
    */
   $attrs = array(
     'class' => 'tdw-atlas',
     'id' => esc_attr($container_id),
-    'data-map-id' => esc_attr($map_id),
     'data-tdw-atlas' => '1',
-    'data-geojson-url' => $geojson_url,
+    'data-map-id' => esc_attr($map_id),
     'data-config-url' => esc_url($config_url),
-    'style' => 'width:100%;height:' . esc_attr($height) . ';'
   );
-  if (!empty($map['view'])) {
-    $attrs['data-view'] = esc_attr($map['view']);
-  }
-  if (!empty($map['preset'])) {
-    $attrs['data-preset'] = esc_attr($map['preset']);
-  }
   $attr_str = '';
   foreach ($attrs as $k => $v) {
     if ($v === null) {

@@ -1,325 +1,300 @@
 /* ============================================================
-   TDW Atlas Engine — Boot Loader
+   Module: TDW Atlas Engine — Boot Loader
    ------------------------------------------------------------
-   Responsibility:
-   - Wait for DOM to be ready
-   - Find all atlas containers rendered by the shortcode
-   - Create a Core instance for each container
+   Purpose:
+   - Orchestrate per-page startup for Atlas instances rendered by the shortcode.
 
-   File structure convention:
-   1) MODULE INIT (constants + tiny helpers)
-   2) FUNCTIONS (all callable logic)
-   3) AUTO-RUN (wire up events / start)
+   Responsibilities:
+   - Wait for DOM ready.
+   - Discover Atlas containers (`.tdw-atlas[data-tdw-atlas="1"]`).
+   - Load shared `atlas.config.json` once.
+   - Enable/disable debug logging based on config.debug (Contract 4).
+   - For each container: resolve map + view, load GeoJSON, create Core instance,
+     and call `core.init({ adapter, el, config, geojson })`.
+
+   Non-responsibilities:
+   - Does not register adapters (Contract 6).
+   - Does not implement rendering logic (adapters do; Contract 9).
+
+   Contracts:
+   - Contract 1–2 (Shortcode + Container)
+   - Contract 4 (Logging & Debugging)
+   - Contract 10 (Boot Orchestration)
+   - Contract 3 (JS file structure convention)
    ============================================================ */
 
-(function () {
-  'use strict';
+/* ============================================================
+   1) MODULE INIT
+   ============================================================ */
 
-  /* ============================================================
-     1) MODULE INIT
-     ============================================================ */
+const CONTAINER_SELECTOR = '.tdw-atlas[data-tdw-atlas="1"]';
+const CONFIG_ATTR = 'data-config-url';
+const ADAPTER_NAME = 'leaflet'; // MVP default
 
-  const LOG_PREFIX = '[TDW Atlas]';
-  const CONTAINER_SELECTOR = '[data-tdw-atlas]';
-  const CONFIG_ATTR = 'data-config-url';
-  // Used for PHP <-> JS debug coordination
-  const DEBUG_COOKIE_NAME = 'tdw_atlas_debug';
-  const DEBUG_COOKIE_DAYS = 30;
-  const ADAPTER_NAME = 'leaflet';
-  const DEBUG_QUERY_PARAM = 'tdw_atlas_debug';
+const SCOPE = 'ATLAS BOOT';
 
-  /**
-   * Helper: DOM Ready
-   * Ensures we only start after the page is fully parsed.
-   */
-  function onReady(callback) {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', callback, { once: true });
-    } else {
-      callback();
-    }
+const {
+  log: _log = () => {},
+  warn: _warn = () => {},
+  error: _error = (scope, el, message, ...meta) => console.error('[TDW ATLAS FATAL]', message, ...meta),
+  setDebugEnabled: _setDebug = () => {},
+  isDebugEnabled: _isDebug = () => false,
+} = window?.TDW?._logger || {};
+
+const dlog = (...args) => _log(SCOPE, ...args);
+const dwarn = (...args) => _warn(SCOPE, ...args);
+const derror = (el, message, ...meta) => _error(SCOPE, el || null, message, ...meta);
+const cookieOps = window?.TDW?.Atlas?.CookieOps || null;
+const setAtlasDebug = (enabled) => {
+  _setDebug("ATLAS BOOT", Boolean(enabled));
+  _setDebug("ATLAS CORE", Boolean(enabled));
+  _setDebug("ATLAS API", Boolean(enabled));
+  _setDebug("ATLAS LF-ADAPTER", Boolean(enabled));
+}
+
+
+/**
+ * Helper: DOM Ready
+ * Ensures we only start after the page is fully parsed.
+ *
+ * @param {Function} callback
+ */
+function onReady(callback) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', callback, { once: true });
+  } else {
+    callback();
   }
+}
 
-  /* ============================================================
-     2) FUNCTIONS
-     ============================================================ */
+/* ============================================================
+   2) FUNCTIONS
+   ============================================================ */
 
-    /**
-   * Loads atlas.config.json (shared config) from a URL.
-   * @param {string} url Absolute URL (from data-config-url).
-   * @returns {Promise<object>} Parsed config object.
-   */
-  async function loadAtlasConfig(url) {
-    if (!url) return null;
+function syncDebugCookie(enabled) {
+  if (!cookieOps || typeof cookieOps.setDebugFlag !== 'function') return;
+  cookieOps.setDebugFlag(Boolean(enabled), { days: 30 });
+}
 
-    try {
-      const res = await fetch(url, { credentials: 'same-origin' });
-      if (!res.ok) {
-        console.error(`${LOG_PREFIX} Failed to load config: ${res.status} ${res.statusText}`, { url });
-        return null;
-      }
-      const json = await res.json();
-      return json;
-    } catch (err) {
-      console.error(`${LOG_PREFIX} Failed to load config (network/parse error).`, { url, err });
+function getBootDebugState() {
+  return Boolean(_isDebug('ATLAS BOOT'));
+}
+
+/**
+ * Loads atlas.config.json (shared config) from a URL.
+ *
+ * @param {string} url Absolute URL (from data-config-url).
+ * @returns {Promise<object|null>} Parsed config object.
+ */
+async function loadAtlasConfig(url) {
+  if (!url) return null;
+
+  try {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok) {
+      derror(null, `Failed to load config (${res.status} ${res.statusText}).`, { url });
       return null;
     }
-  }
 
-  /**
-   * Read a cookie value.
-   * @param {string} name
-   * @returns {string|null}
-   */
-  function getCookie(name) {
-    const needle = `${name}=`;
-    const parts = document.cookie.split('; ').filter(Boolean);
-    for (const p of parts) {
-      if (p.startsWith(needle)) return p.slice(needle.length);
-    }
+    const json = await res.json();
+    dlog('Loaded atlas.config.json.', { url });
+    return json;
+  } catch (err) {
+    derror(null, 'Failed to load config (network/parse error).', { url, err });
+    return null;
+  }
+}
+
+/**
+ * Returns the Atlas Core factory (or null if not present).
+ *
+ * @returns {Function|null}
+ */
+function getCoreFactory() {
+  const create = window?.TDW?.Atlas?.Core?.create;
+
+  if (typeof create !== 'function') {
+    derror(null, 'Core not found (expected window.TDW.Atlas.Core.create).');
     return null;
   }
 
-  /**
-   * Set or delete a cookie.
-   * Uses both Max-Age and Expires for broad browser compatibility.
-   *
-   * @param {string} name
-   * @param {string} value
-   * @param {number} maxAgeSeconds Use 0 to delete.
-   */
-  function setCookie(name, value, maxAgeSeconds) {
-    const d = new Date();
-    d.setTime(d.getTime() + maxAgeSeconds * 1000);
+  return create;
+}
 
-    const expires = maxAgeSeconds > 0 ? `; Expires=${d.toUTCString()}` : '; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    const maxAge = `; Max-Age=${maxAgeSeconds}`;
+/**
+ * Returns the adapter implementation from the Atlas API (or null if missing).
+ *
+ * @returns {object|null}
+ */
+function getAdapter() {
+  const getAdapterFn = window?.TDW?.Atlas?.API?.getAdapter;
 
-    // Path=/ ensures PHP can read it site-wide.
-    // SameSite=Lax is a safe default for WP.
-    document.cookie = `${name}=${encodeURIComponent(value)}${expires}${maxAge}; Path=/; SameSite=Lax`;
+  if (typeof getAdapterFn !== 'function') {
+    derror(null, 'API not found (expected window.TDW.Atlas.API.getAdapter).');
+    return null;
   }
 
-  /**
-   * Sync debug cookie for PHP <-> JS coordination.
-   *
-   * Policy:
-   * - If config.debug === true => set cookie to "1" or create for 30 days
-   * - If config.debug === false => set cookie to "0" for next 30 days
-   * - Otherwise => do nothing, print error
-   *
-   * Important:
-   * - PHP decides whether to enqueue atlas-debug.js at request time.
-   * - So this cookie mainly affects the NEXT page load.
-   *
-   * @param {object|null} config Atlas config object.
-   */
-  function syncDebugCookie(config) {
-    if (!config || typeof config.debug === 'undefined') {
-      console.error(`${LOG_PREFIX} syncDebugCookie: Missing or invalid debug config.`, { config });
-      return;
-    }
-
-    const maxAge = DEBUG_COOKIE_DAYS * 24 * 60 * 60; // 30 days
-
-    if (config.debug === true) {
-      // Enable debug for 30 days
-      setCookie(DEBUG_COOKIE_NAME, '1', maxAge);
-      return;
-    }
-
-    if (config.debug === false) {
-      // Explicitly disable debug (value "0") for 30 days
-      setCookie(DEBUG_COOKIE_NAME, '0', maxAge);
-      return;
-    }
-
-    // Any other value is considered invalid
-    console.error(`${LOG_PREFIX} syncDebugCookie: Unsupported debug value. Expected true/false.`, { value: config.debug });
+  const adapter = getAdapterFn(ADAPTER_NAME);
+  if (!adapter) {
+    derror(null, `Adapter not registered: ${ADAPTER_NAME}`);
+    return null;
   }
 
-  /**
-   * Returns the Atlas Core factory (or null if not present).
-   * We keep this check here (Boot) so Core/API can stay clean.
-   */
-  function getCoreFactory() {
-    const core = window?.TDW?.Atlas?.Core;
-    const create = core?.create;
+  return adapter;
+}
 
-    if (typeof create !== 'function') {
-      console.error(`${LOG_PREFIX} Core not found (expected window.TDW.Atlas.Core.create).`);
-      return null;
-    }
+/**
+ * Boots a single atlas container.
+ *
+ * @param {HTMLElement} el The atlas container element.
+ * @param {Function} createCore The core factory function.
+ * @param {{config: object|null, configUrl: string}} shared Shared config + config URL.
+ */
+async function bootOne(el, createCore, shared) {
+  const mapId = el.getAttribute('data-map-id');
+  const config = shared?.config || null;
+  const configUrl = shared?.configUrl || el.getAttribute(CONFIG_ATTR) || '';
 
-    return create;
+  if (!mapId) {
+    derror(el, 'Missing map id (data-map-id).');
+    return;
   }
 
-  /**
-   * Returns the adapter implementation from the Atlas API (or null if missing).
-   * @returns {object|null}
-   */
-  function getAdapter() {
-    const api = window?.TDW?.Atlas?.API;
-    const getAdapterFn = api?.getAdapter;
-
-    if (typeof getAdapterFn !== 'function') {
-      console.error(`${LOG_PREFIX} API not found (expected window.TDW.Atlas.API.getAdapter).`);
-      return null;
-    }
-
-    const adapter = getAdapterFn(ADAPTER_NAME);
-    if (!adapter) {
-      console.error(`${LOG_PREFIX} Adapter not registered: ${ADAPTER_NAME}`);
-      return null;
-    }
-
-    return adapter;
+  if (!config) {
+    derror(el, 'Missing atlas config (atlas.config.json could not be loaded).');
+    return;
   }
 
-  /**
-   * Boots a single atlas container.
-   * Now async; uses adapter via API and passes config.
-   * @param {HTMLElement} el The atlas container element.
-   * @param {Function} createCore The core factory function.
-   * @param {object|null} shared Object containing config and configUrl.
-   */
-  async function bootOne(el, createCore, shared) {
-    const mapId = el.getAttribute('data-map-id');
-    const config = shared?.config || null;
-    const configUrl = shared?.configUrl || el.getAttribute(CONFIG_ATTR) || '';
-
-    if (!mapId) {
-      el.innerHTML = '<div class="tdw-atlas-error">Missing map id (data-map-id).</div>';
-      return;
-    }
-
-    if (!config) {
-      el.innerHTML = '<div class="tdw-atlas-error">Missing atlas config (atlas.config.json could not be loaded).</div>';
-      return;
-    }
-
-    if (!config.maps || !config.maps[mapId]) {
-      el.innerHTML = `<div class="tdw-atlas-error">Unknown map id: <strong>${mapId}</strong>.</div>`;
-      return;
-    }
-
-    const geojsonRel = config.maps[mapId].geojson;
-    if (!geojsonRel) {
-      el.innerHTML = `<div class="tdw-atlas-error">Missing geojson path for map id: <strong>${mapId}</strong>.</div>`;
-      return;
-    }
-
-    let geojsonUrl;
-    try {
-      geojsonUrl = new URL(geojsonRel, configUrl).href;
-    } catch (e) {
-      el.innerHTML = `<div class="tdw-atlas-error">Invalid geojson URL for map id: <strong>${mapId}</strong>.</div>`;
-      return;
-    }
-
-    let geojson;
-    try {
-      const res = await fetch(geojsonUrl, { credentials: 'same-origin' });
-      if (!res.ok) {
-        el.innerHTML = `<div class="tdw-atlas-error">Failed to load GeoJSON (${res.status}).</div>`;
-        return;
-      }
-      geojson = await res.json();
-    } catch (err) {
-      el.innerHTML = `<div class="tdw-atlas-error">Failed to load GeoJSON (network/parse error).</div>`;
-      return;
-    }
-
-    const adapter = getAdapter();
-    if (!adapter) {
-      el.innerHTML = '<div class="tdw-atlas-error">Atlas adapter missing. Check console.</div>';
-      return;
-    }
-
-    // Core is a factory: first create an instance, then init it.
-    const coreInstance = createCore();
-
-    if (!coreInstance || typeof coreInstance.init !== 'function') {
-      console.error(`${LOG_PREFIX} Core.create() did not return a valid instance with init().`, { mapId, el, coreInstance });
-      return;
-    }
-
-    coreInstance.init({ adapter, el, config, geojson });
+  if (!config.maps || !config.maps[mapId]) {
+    derror(el, `Unknown map id: ${mapId}.`);
+    return;
   }
 
-  /**
-   * PRE-BOOT
-   * ------------------------------------------------------------
-   * Runs logic that is NOT directly tied to individual map instances,
-   * but required before any map is booted.
-   *
-   * Responsibilities:
-   * - Load shared atlas.config.json (once)
-   * - Sync debug cookie (PHP <-> JS coordination)
-   *
-   * @returns {Promise<{config: object|null, configUrl: string}|null>} The loaded config and URL, or null if no containers.
-   */
-  async function preBoot() {
-    const containers = document.querySelectorAll(CONTAINER_SELECTOR);
-    if (!containers.length) return null;
-
-    const first = containers[0];
-    const configUrl = first.getAttribute(CONFIG_ATTR);
-    console.info(`${LOG_PREFIX} preBoot: found atlas container + config URL.`, { configUrl });
-
-    if (!configUrl) {
-      console.warn(`${LOG_PREFIX} Missing ${CONFIG_ATTR} on atlas container. Debug cookie sync skipped.`, { el: first });
-      return { config: null, configUrl };
-    }
-
-    const config = await loadAtlasConfig(configUrl);
-    if (config) {
-      syncDebugCookie(config);
-    }
-    return { config, configUrl };
+  const geojsonRel = config.maps[mapId].geojson;
+  if (!geojsonRel) {
+    derror(el, `Missing geojson path for map id: ${mapId}.`);
+    return;
   }
 
-  /**
-   * BOOT-ALL
-   * ------------------------------------------------------------
-   * Responsible only for booting individual map containers.
-   *
-   * @param {{config: object|null, configUrl: string}|null} shared The loaded config and URL, or null.
-   * @returns {Promise<void>}
-   */
-  async function bootAll(shared) {
-    const createCore = getCoreFactory();
-    console.info(`${LOG_PREFIX} bootAll: core factory resolved.`, { hasSharedConfig: !!shared?.config, debug: shared?.config?.debug });
-    if (!createCore) return;
+  let geojsonUrl;
+  try {
+    geojsonUrl = new URL(geojsonRel, configUrl).href;
+  } catch (e) {
+    derror(el, `Invalid geojson URL for map id: ${mapId}.`);
+    return;
+  }
 
-    const containers = document.querySelectorAll(CONTAINER_SELECTOR);
-    if (!containers.length) return;
-
-    // Boot sequentially (keeps logs readable and avoids race confusion while MVP).
-    for (const el of containers) {
-      // eslint-disable-next-line no-await-in-loop
-      await bootOne(el, createCore, shared);
+  let geojson;
+  try {
+    const res = await fetch(geojsonUrl, { credentials: 'same-origin' });
+    if (!res.ok) {
+      derror(el, `Failed to load GeoJSON (${res.status}).`);
+      return;
     }
+    geojson = await res.json();
+  } catch (err) {
+    derror(el, 'Failed to load GeoJSON (network/parse error).');
+    return;
   }
 
-  /**
-   * START
-   * ------------------------------------------------------------
-   * Entry point of the Boot module.
-   * Orchestrates:
-   * 1) preBoot()
-   * 2) bootAll()
-   */
-  async function start() {
-    console.info(`${LOG_PREFIX} start()`);
-    const shared = await preBoot();
-    await bootAll(shared);
+  const adapter = getAdapter();
+  if (!adapter) {
+    derror(el, 'Atlas adapter missing. See console for details.');
+    return;
   }
 
-  /* ============================================================
-     3) AUTO-RUN
-     ============================================================ */
+  const coreInstance = createCore();
+  if (!coreInstance || typeof coreInstance.init !== 'function') {
+    derror(null, 'Core.create() did not return a valid instance with init().', { mapId, coreInstance });
+    derror(el, 'Core initialization failed.');
+    return;
+  }
 
-  onReady(start);
-  
-})();
+  dlog('Boot: initializing core', { mapId, adapter: ADAPTER_NAME });
+  coreInstance.init({ adapter, el, config, geojson });
+}
+
+/**
+ * PRE-BOOT
+ * - Load shared atlas.config.json (once)
+ * - Set debug enablement from config.debug
+ *
+ * @returns {Promise<{config: object|null, configUrl: string}|null>}
+ */
+async function preBoot() {
+  const containers = document.querySelectorAll(CONTAINER_SELECTOR);
+  if (!containers.length) return null;
+
+  const first = containers[0];
+  const configUrl = first.getAttribute(CONFIG_ATTR);
+
+  if (!configUrl) {
+    derror(first, `Missing ${CONFIG_ATTR} on atlas container.`, { el: first });
+    return { config: null, configUrl: '' };
+  }
+
+  const config = await loadAtlasConfig(configUrl);
+
+  // Debug enablement (Contract 4): config.debug is the single source of truth.
+  if (config && typeof config.debug === 'boolean') {
+    const debugWasEnabled = getBootDebugState();
+    const debugWillBeEnabled = Boolean(config.debug);
+
+    if (debugWasEnabled && !debugWillBeEnabled) {
+      dlog('Logging turned off.');
+    }
+
+    setAtlasDebug(config.debug);
+
+    if (!debugWasEnabled && debugWillBeEnabled) {
+      dlog('Logging activated, reload for complete log.');
+    }
+
+    syncDebugCookie(config.debug);
+  } else {
+    derror(null, 'atlas.config.json missing valid boolean debug flag.', { configUrl, debug: config?.debug });
+  }
+
+  return { config, configUrl };
+}
+
+/**
+ * BOOT-ALL
+ * - Boot each map container sequentially (MVP)
+ *
+ * @param {{config: object|null, configUrl: string}|null} shared
+ */
+async function bootAll(shared) {
+  const createCore = getCoreFactory();
+  if (!createCore) return;
+
+  const containers = document.querySelectorAll(CONTAINER_SELECTOR);
+  if (!containers.length) return;
+
+  for (const el of containers) {
+    // eslint-disable-next-line no-await-in-loop
+    await bootOne(el, createCore, shared);
+  }
+}
+
+/**
+ * START
+ * Entry point of the Boot module.
+ */
+async function start() {
+  dlog('start()');
+  const shared = await preBoot();
+  await bootAll(shared);
+}
+
+/* ============================================================
+   3) PUBLIC API
+   ============================================================ */
+
+// Boot exposes no public API by design.
+
+/* ============================================================
+   4) AUTO-RUN
+   ============================================================ */
+
+onReady(start);

@@ -13,6 +13,9 @@
   /* Height comes from inline style on the shortcode for MVP (e.g. 70vh). */
   overflow: hidden;
 
+  /* Default height (MVP) – can be overridden via inline style if ever reintroduced */
+  min-height: 70vh;
+
   /* Optional: give it a subtle frame matching the design system */
   background: var(--tdw-card, #ffffff);
   border: 1px solid var(--tdw-border, rgba(0, 0, 0, 0.15));
@@ -26,10 +29,46 @@
 }
 
 /* ============================================================
-   Error UI (rendered by shortcode when config/id is missing)
+   Empty Container Fallback (Dev / Debug Aid)
+   ------------------------------------------------------------
+   If Boot fails before rendering, the container stays empty.
+   We surface a subtle message for visibility.
    ============================================================ */
 
-.tdw-atlas-error {
+.tdw-atlas:empty::before {
+  content: "Loading map…";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: absolute;
+  inset: 0;
+
+  padding: 1rem;
+
+  font-size: 0.9rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  color: var(--tdw-text, #1D1A16);
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--tdw-water, #3C9FAE) 6%, transparent) 0,
+    color-mix(in srgb, var(--tdw-water, #3C9FAE) 6%, transparent) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+}
+
+/* If Boot explicitly marks container as failed */
+.tdw-atlas.tdw-atlas-failed:empty::before {
+  content: "Atlas couldn’t fill container.";
+}
+
+/* ============================================================
+   Error UI (class used by tdw-logger -> should be moved to TDW Core)
+   ============================================================ */
+
+.tdw-error {
   box-sizing: border-box;
   width: 100%;
 

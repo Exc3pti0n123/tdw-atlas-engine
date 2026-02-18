@@ -1,0 +1,246 @@
+/* ============================================================
+   Module: TDW Atlas Engine — Debug
+   ------------------------------------------------------------
+   Role:
+   - Development-only diagnostics module
+   - Provides internal plugin logger
+   - Performs optional runtime checks (tokens, namespace)
+
+   Public Surface:
+   - window.TDW.Atlas._logger
+   - window.TDW.Atlas.Debug.checkDesignTokens()
+   - window.TDW.Atlas.Debug.checkAtlasNamespace()
+
+   Runtime Behavior:
+   - Loaded conditionally via PHP (based on debug cookie)
+   - Must not mutate Core, API, Boot, or Adapter state
+   - Safe to load before or after other Atlas modules
+
+   Dependencies:
+   - None (must be load-order independent)
+
+   Notes:
+   - All log/warn routing goes through _logger
+   - Errors always log via console.error (and may render a visible error UI if an element is provided).
+   ============================================================ */
+
+(function (window, document) {
+  'use strict';
+
+  /* ============================================================
+     1) MODULE INIT
+     ============================================================ */
+
+  const PREFIX = '[TDW ATLAS]';
+
+  // Ensure stable plugin namespace (idempotent)
+  window.TDW = window.TDW || {};
+  window.TDW.Atlas = window.TDW.Atlas || {};
+
+  /**
+   * Debug logger for the Atlas plugin.
+   *
+   * Other modules should use this via optional chaining, e.g.:
+   *   window.TDW?.Atlas?._logger?.log?.('...')
+   *
+   * NOTE: This file is only loaded when debug is enabled,
+   * so production builds should not rely on it being present.
+   */
+  window.TDW.Atlas._logger = window.TDW.Atlas._logger || {
+    log: (...args) => console.log(PREFIX, ...args),
+    warn: (...args) => console.warn(PREFIX, ...args),
+
+    /**
+     * Fatal error helper.
+     * Always logs to the console.
+     * Optionally renders a visible error UI into a given Atlas container.
+     *
+     * Supported call forms:
+     * - error('message', details)
+     * - error(el, 'message', details)
+     * - error({ el }, 'message', details)
+     *
+     * @param {...any} args
+     */
+    error: (...args) => {
+      // 1) Always log (never gated by debug)
+      console.error(PREFIX, ...args);
+
+      // 2) Try to extract a target element to render a visible error
+      let el = null;
+      if (args[0] instanceof HTMLElement) {
+        el = args[0];
+        args = args.slice(1);
+      } else if (args[0] && typeof args[0] === 'object' && args[0].el instanceof HTMLElement) {
+        el = args[0].el;
+        args = args.slice(1);
+      }
+
+      if (!el) return;
+
+      // Do not crash the page if rendering fails.
+      try {
+        const safeMsg = String(args[0] ?? 'Atlas failed to render.');
+        el.innerHTML =
+          '<div class="tdw-atlas-error" role="alert">' +
+          '<strong>Atlas error</strong><br>' +
+          safeMsg +
+          '</div>';
+      } catch (_) {
+        // ignore
+      }
+    },
+  };
+
+  // Short aliases used ONLY within this file
+  const dlog = (...args) => window.TDW?.Atlas?._logger?.log?.(...args);
+  const dwarn = (...args) => window.TDW?.Atlas?._logger?.warn?.(...args);
+  const derror = (...args) => window.TDW?.Atlas?._logger?.error?.(...args);
+
+  // Visible marker that atlas-debug.js actually executed
+  dlog('debug loaded');
+
+  /* ============================================================
+     2) FUNCTIONS
+     ============================================================ */
+
+  /**
+   * Validate required design tokens (from tdw-site-core/global tokens).
+   * If tokens are missing, atlas.css will fall back to defaults.
+   *
+   * @param {string[]} [tokens] Optional list of CSS custom properties.
+   * @returns {{missing: string[], required: string[]}}
+   */
+  function checkDesignTokens(tokens = []) {
+    const required = tokens.length
+      ? tokens
+      : [
+          '--tdw-bg',
+          '--tdw-text',
+          '--tdw-water',
+          '--tdw-border',
+          '--tdw-card',
+        ];
+
+    const styles = getComputedStyle(document.documentElement);
+
+    const missing = [];
+    for (const token of required) {
+      const value = styles.getPropertyValue(token).trim();
+      if (!value) missing.push(token);
+    }
+
+    if (missing.length) {
+      dwarn(
+        'Missing design tokens:',
+        missing,
+        '→ atlas.css will use fallbacks (check tdw-site-core token definitions).'
+      );
+    } else {
+      dlog('All required design tokens are present.');
+    }
+
+    return { missing, required };
+  }
+
+  /**
+   * Verify Atlas namespace presence (Core/API/Adapters).
+   *
+   * @param {string[]} [paths] Optional paths to check.
+   * @returns {{report: Array<{path: string, type: string}>, missing: string[], present: Array<{path: string, type: string}>}}
+   */
+  function checkAtlasNamespace(paths = []) {
+    const defaults = [
+      'TDW.Atlas',
+      'TDW.Atlas.Core',
+      'TDW.Atlas.Core.create',
+      'TDW.Atlas.API',
+      'TDW.Atlas.API.getAdapter',
+      'TDW.Atlas.Adapters',
+    ];
+
+    const wanted = (paths && paths.length ? paths : defaults).map(String);
+
+    const get = (root, key) =>
+      root && Object.prototype.hasOwnProperty.call(root, key)
+        ? root[key]
+        : undefined;
+
+    const resolvePath = (path) => {
+      const parts = path.split('.').filter(Boolean);
+      let cur = window;
+      for (const p of parts) {
+        cur = get(cur, p);
+        if (cur === undefined) return undefined;
+      }
+      return cur;
+    };
+
+    const report = wanted.map((p) => {
+      const val = resolvePath(p);
+      const type = val === undefined ? 'missing' : typeof val;
+      return { path: p, type };
+    });
+
+    const missing = report.filter((r) => r.type === 'missing').map((r) => r.path);
+    const present = report.filter((r) => r.type !== 'missing');
+
+    if (missing.length) dwarn('Namespace check: missing', missing);
+    if (present.length) {
+      dlog(
+        'Namespace check: present',
+        present.map((r) => `${r.path} (${r.type})`)
+      );
+    }
+
+    // Extra: show top-level TDW.Atlas keys if present (helps spot naming mismatches)
+    const atlas = window.TDW?.Atlas;
+    if (atlas && typeof atlas === 'object') {
+      try {
+        dlog('TDW.Atlas keys:', Object.keys(atlas));
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    return { report, missing, present };
+  }
+
+  /* ============================================================
+     3) PUBLIC API (under the plugin namespace)
+     ============================================================ */
+
+  // Keep debug helpers scoped to the plugin namespace.
+  // This avoids an extra global like window.TDWAtlasDebug.
+  window.TDW.Atlas.Debug = window.TDW.Atlas.Debug || {};
+  // _logger already registered in INIT
+  window.TDW.Atlas.Debug.checkDesignTokens = checkDesignTokens;
+  window.TDW.Atlas.Debug.checkAtlasNamespace = checkAtlasNamespace;
+
+  /* ============================================================
+     4) AUTO-RUN (debug-only)
+     ============================================================ */
+
+  /**
+   * Run safe automatic checks when debug is enabled.
+   */
+  function runAutoChecks() {
+    try {
+      checkDesignTokens();
+    } catch (e) {
+      derror('Auto token check failed:', e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runAutoChecks, { once: true });
+  } else {
+    runAutoChecks();
+  }
+
+})(window, document);
+
+/* TODO
+  - Move any remaining debug-only utilities here (e.g., adapter listing) once needed.
+  - Error container UX (visible fallback UI) is handled by boot/core when rendering fails.
+*/
