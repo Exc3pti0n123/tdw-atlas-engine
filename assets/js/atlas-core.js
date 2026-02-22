@@ -2,45 +2,29 @@
    Module: TDW Atlas Engine — Core
    ------------------------------------------------------------
    Purpose
-   - Provide a per-container Core instance as a factory (no singleton)
-   - Keep state + navigation logic independent from any render engine
-  
+   - Provide a per-container Core instance as a factory (no singleton).
+   - Keep orchestration state independent from renderer implementation.
+
    Responsibilities
-   - Export ONE public factory: `window.TDW.Atlas.Core.create`
-   - Create isolated Core instances (one per shortcode container)
-   - Call the selected Adapter via a minimal contract (no vendor specifics)
-  
+   - Export ONE public factory: window.TDW.Atlas.Core.create
+   - Validate adapter instance contract at Core boundary.
+   - Call adapter lifecycle methods for one container instance.
+
    Non-responsibilities
-   - Does NOT scan the DOM
-   - Does NOT fetch config or GeoJSON
-   - Does NOT register adapters
-  
-   Public surface
-   - `window.TDW.Atlas.Core.create()` → Core instance
-  
-   Core → Adapter contract (minimum)
-   - init({ el, config, geojson, core })
-   - showWorld()
-   - showRegion(regionId)
-   - onResize(activeRegionId)
-   - destroy() (optional but recommended)
-  
-   Contracts
-   - Contract 5 (Global Namespace)
-   - Contract 7 (Core Factory)
-   - Contract 8 (Core Instance API)
-   - Contract 9 (Adapter Contract)
+   - No DOM scanning.
+   - No config/GeoJSON fetching.
+   - No adapter module loading.
    ============================================================ */
 
-// ============================================================
-// 1) MODULE INIT: Namespace (idempotent)
-// ============================================================
+/* ============================================================
+   1) MODULE INIT
+   ============================================================ */
 
 window.TDW = window.TDW || {};
 window.TDW.Atlas = window.TDW.Atlas || {};
 window.TDW.Atlas.Core = window.TDW.Atlas.Core || {};
 
-const SCOPE = 'ATLAS CORE'; //activated hard in boot
+const SCOPE = 'ATLAS CORE';
 
 const {
   log: _log = () => {},
@@ -52,130 +36,95 @@ const dlog = (...args) => _log(SCOPE, ...args);
 const dwarn = (...args) => _warn(SCOPE, ...args);
 const derror = (el, message, ...meta) => _error(SCOPE, el || null, message, ...meta);
 
-
-// ============================================================
-// 2) FUNCTIONS
-// ============================================================
+/* ============================================================
+   2) FUNCTIONS
+   ============================================================ */
 
 /**
- * Create a new Core instance (isolated state).
+ * Create one isolated Core instance.
  *
- * @returns {object} Core instance
+ * @returns {{init: Function, destroy: Function}}
  */
 function createCore() {
-  // ---------- Private instance state ----------
   let adapter = null;
-  let activeRegionId = null;
-  let el = null; // container element reference
+  let el = null;
 
-  // ---------- Public API (instance) ----------
   const Core = {};
 
   /**
-   * Initialize this Core instance.
+   * Initialize one map instance.
    *
-   * @param {object} params
-   * @param {object} params.adapter  Adapter implementation (required)
-   * @param {HTMLElement} params.el  Container element (required)
-   * @param {object} [params.config] Config object (optional)
-   * @param {object} [params.geojson] GeoJSON FeatureCollection (optional, provided by boot)
+   * @param {{adapter: object, el: HTMLElement, config?: object, geojson?: object}} params
    */
-  Core.init = function init({ adapter: a, el: element, config, geojson } = {}) {
-    if (!a) {
-      derror(null, 'Core.init: No adapter provided');
-      return;
-    }
-    if (!element) {
-      derror(null, 'Core.init: No container element provided');
+  Core.init = function init({ adapter: adapterInstance, el: element, config, geojson } = {}) {
+    if (!adapterInstance || typeof adapterInstance !== 'object') {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with implicit adapter defaults.
+      derror(null, 'Core.init: no valid adapter instance provided.');
       return;
     }
 
-    adapter = a;
+    if (!(element instanceof HTMLElement)) {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak element assumptions.
+      derror(null, 'Core.init: no valid container element provided.');
+      return;
+    }
+
+    adapter = adapterInstance;
     el = element;
 
-    // Allow adapters to read state and call core methods.
-    // NOTE: Core does not fetch GeoJSON. Boot may provide it, and we just pass it through.
-    if (typeof adapter?.init !== 'function') {
-      derror(el, 'Core.init: Adapter missing required init({ el, config, geojson, core })');
-      return;
+    try {
+      const result = adapter.init({
+        config: config || {},
+        geojson: geojson || null,
+        el,
+        core: Core,
+      });
+
+      if (result && typeof result.then === 'function') {
+        result.catch((err) => {
+          derror(el, 'Core.init: adapter.init rejected unexpectedly.', { err });
+          Core.destroy();
+        });
+      }
+    } catch (err) {
+      derror(el, 'Core.init: adapter.init threw unexpectedly.', { err });
+      Core.destroy();
     }
-
-    adapter.init({
-      config: config || {},
-      geojson: geojson || null,
-      el,
-      core: Core,
-    });
   };
 
   /**
-   * Switch back to the world view.
-   */
-  Core.showWorld = function showWorld() {
-    activeRegionId = null;
-    adapter?.showWorld?.();
-  };
-
-  /**
-   * Switch to a specific region.
-   *
-   * @param {string} regionId
-   */
-  Core.showRegion = function showRegion(regionId) {
-    if (!regionId) return;
-    activeRegionId = String(regionId);
-    adapter?.showRegion?.(activeRegionId);
-  };
-
-  /**
-   * Read-only snapshot of current state.
-   */
-  Core.getState = function getState() {
-    return { activeRegionId };
-  };
-
-  /**
-   * Notify adapter that the container size changed.
-   * (Boot code should call this on resize or via ResizeObserver.)
-   */
-  Core.onResize = function onResize() {
-    adapter?.onResize?.(activeRegionId);
-  };
-
-  /**
-   * Clean up adapter resources.
-   * Useful when re-initializing or when WP re-renders blocks.
+   * Destroy one map instance and release renderer resources.
    */
   Core.destroy = function destroy() {
+    if (!adapter) return;
+
     try {
-      adapter?.destroy?.();
+      adapter.destroy();
+    } catch (err) {
+      dwarn('Core.destroy: adapter.destroy threw.', { err });
     } finally {
       adapter = null;
       el = null;
-      activeRegionId = null;
     }
-  };
-
-  /**
-   * Expose the container element (debugging / adapter convenience).
-   */
-  Core.getEl = function getEl() {
-    return el;
   };
 
   return Core;
 }
 
-// ============================================================
-// 3) PUBLIC API (window.TDW.Atlas.Core.create)
-// ============================================================
+/* ============================================================
+   3) PUBLIC API
+   ============================================================ */
 
-// Register the factory.
-// If something already registered a factory, keep the existing one.
 if (typeof window.TDW.Atlas.Core.create !== 'function') {
   window.TDW.Atlas.Core.create = createCore;
   dlog('Core factory registered.');
 } else {
-  // Dual-load scenario: keep the first factory to avoid breaking live instances.
+  // Existing factory is kept to avoid replacing a live reference during duplicate loads.
   dwarn('Core factory already exists; keeping existing factory (dual-load suspected).');
 }
+
+/* ============================================================
+   4) AUTO-RUN
+   ============================================================ */
+
+// No autorun logic by design.

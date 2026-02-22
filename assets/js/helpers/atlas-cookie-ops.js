@@ -43,7 +43,7 @@ const derror = (message, ...meta) => _error(SCOPE, null, message, ...meta);
 
 const DEFAULT_COOKIE_DAYS = 30;
 const DEBUG_COOKIE_NAME = 'tdw_atlas_debug';
-const ATLAS_DEBUG_SCOPES = ['ATLAS BOOT', 'ATLAS CORE', 'ATLAS API', 'ATLAS LF-ADAPTER', 'ATLAS COOKIE-OPS'];
+const ATLAS_DEBUG_SCOPES = ['ATLAS BOOT', 'ATLAS CORE', 'ATLAS ADAPTER', 'ATLAS LF-ADAPTER', 'ATLAS COOKIE-OPS'];
 const BASE_COOKIE_ATTRS = {
   path: '/',
   sameSite: 'Lax',

@@ -9,7 +9,7 @@ If you change a contract, update this file and bump the plugin version.
 - **Content Editors (WP Block Editor)**: place `[tdw_atlas]` shortcodes and wrap them in layout groups.
 - **Theme / tdw-site-core**: provides global design tokens (CSS variables) used by Atlas UI.
 - **TDW Atlas Boot (JS)**: orchestrates loading config + map data and wiring Core + Adapter.
-- **TDW Atlas API (JS)**: stable namespace + adapter registry used by Boot/Core.
+- **TDW Atlas Adapter Factory (JS)**: resolves configured adapter key to concrete adapter instance.
 - **TDW Atlas Core (JS)**: per-instance state machine; calls adapter methods; no DOM scanning.
 - **Adapters (JS)**: render implementation (Leaflet today) and map-specific behaviors.
 - **Vendor Libraries**: Leaflet (ESM), its CSS, images, and sourcemaps.
@@ -70,7 +70,7 @@ Reference template:
    - Public surface (what it exports under `window.TDW.Atlas.*`)
    - Load behavior (when/why it runs, auto-run yes/no)
    - Side-effects (DOM access, network, adapter registration, etc.)
-   - External dependencies (Boot, API, Core, vendor modules, config)
+   - External dependencies (Boot, Adapter Factory, Core, vendor modules, config)
 1) **MODULE INIT** (namespace + constants + tiny helpers)
 2) **FUNCTIONS** (callable logic / utilities)
 3) **PUBLIC API** (exports under `window.TDW.Atlas.*`)
@@ -89,14 +89,14 @@ Notes:
 ### Minimal schema (MVP)
 ```json
 {
-  "meta": { "engine": "tdw-atlas-engine", "version": "0.1.2" },
+  "meta": { "engine": "tdw-atlas-engine", "version": "0.1.3" },
   "debug": true,
   "vendor": {
     "leafletJs": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet-src.js",
     "leafletCss": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet.css"
   },
   "maps": {
-    "world": { "geojson": "data/ne_50m_admin_0_countries_lakes.json", "view": "world" }
+    "world": { "adapter": "leaflet", "geojson": "data/ne_50m_admin_0_countries_lakes.json", "view": "world" }
   },
   "views": {
     "world": { "bounds": [[-60, -180], [85, 180]] }
@@ -107,6 +107,7 @@ Notes:
 ### Rules
 - `debug` is the single authoritative source for whether debug should be enabled.
 - Runtime config is served via `/wp-json/tdw-atlas/v1/config` (effective config from DB with JSON fallback).
+- `maps.{id}.adapter` is required and selects the concrete adapter module.
 - `maps.{id}.geojson` is typically a relative path inside the plugin; Boot resolves it relative to `meta.baseUrl` (fallback: `data-config-url`).
 - `views.{viewId}.bounds` is optional but recommended for predictable fit.
 
@@ -122,7 +123,7 @@ Notes:
 ## Contract 5 — Logging & Debugging
 
 ### Purpose
-Defines how logging and debug behavior work across all Atlas modules (Boot, API, Core, Adapters).
+Defines how logging and debug behavior work across all Atlas modules (Boot, Adapter Factory, Core, Adapters).
 Ensures predictable diagnostics without polluting production consoles.
 Debug is strictly observational.
 For runtime sequencing see Contract 17.
@@ -147,7 +148,7 @@ For runtime sequencing see Contract 17.
 
 ### Routing Rules
 
-- All Atlas modules (Boot, API, Core, Adapters) must use the shared TDW logger:
+- All Atlas modules (Boot, Adapter Factory, Core, Adapters) must use the shared TDW logger:
   - `window.TDW._logger`
 - The logger is scope-based (e.g. `"ATLAS BOOT"`, `"ATLAS CORE"`).
 - No module may call `console.log` or `console.warn` directly.
@@ -187,6 +188,15 @@ Fatal errors must:
 
 The logger itself is framework-agnostic and does not contain Atlas-specific logic.
 
+### Fail-Fast Attention Principle
+
+- Unexpected runtime or contract states must fail fast (`error` + immediate abort of current flow).
+- Per-instance abort is preferred over global crash.
+- No silent fallbacks for contract violations.
+- If code intentionally hard-stops even though execution could continue, it must include:
+  - `// ATTENTION: intentional hard-stop for diagnosability; runtime could continue.`
+- Non-critical degradation is allowed only with explicit `warn` diagnostic.
+
 ### Logging Flow (Expected Runtime Behavior)
 
 - `tdw-logger` initializes logger functions and scope state (shared dependency, eager enqueued).
@@ -214,7 +224,7 @@ All public plugin JS attaches under:
 - `window.TDW.Atlas`
 
 ### Required keys
-- `window.TDW.Atlas.API`
+- `window.TDW.Atlas.Adapter`
 - `window.TDW.Atlas.Core`
 
 ### Forbidden
@@ -227,19 +237,18 @@ All public plugin JS attaches under:
 
 ---
 
-## Contract 7 — API (Adapter Registry)
+## Contract 7 — Adapter Factory
 
 ### Location
-- `assets/js/atlas-api.js`
+- `assets/js/atlas-adapter.js`
 
 ### Required API surface
-- `window.TDW.Atlas.API.registerAdapter(name, adapter)`
-- `window.TDW.Atlas.API.getAdapter(name)`
+- `window.TDW.Atlas.Adapter.create({ adapterKey, mapId, el })`
 
 ### Behavior
-- Registry is idempotent.
-- Adapter modules self register at load time
-- `getAdapter` returns `null` if not registered.
+- Factory dynamically imports concrete adapter modules by key.
+- Unknown adapter key is a hard per-instance failure.
+- Concrete adapter module must export `createAdapter()`.
 
 ---
 
@@ -262,11 +271,15 @@ All public plugin JS attaches under:
 
 Each Core instance exposes:
 - `init({ adapter, el, geojson, config })`
-- `showWorld()`
-- `showRegion(regionId)`
-- `getState()` => `{ activeRegionId }`
-- `onResize()`
-- `destroy()` (optional but recommended)
+- `destroy()`
+
+Notes:
+- Core consumes adapter instances from Adapter Factory and validates only Core-boundary inputs.
+- Core uses isolated adapter instances per map instance.
+- Core-Adapter instance chain is fixed:
+  - `1 container -> 1 core instance -> 1 adapter instance`.
+  - Adapter instances are created by adapter module factories (`createAdapter`).
+  - Adapter instance state must stay local to that instance (no shared mutable runtime state across containers).
 
 ---
 
@@ -274,8 +287,6 @@ Each Core instance exposes:
 
 Adapters must implement:
 - `init({ el, config, geojson, core })`  *(may be async)*
-- `showWorld()`
-- `showRegion(regionId)`
 - `onResize(activeRegionId)`
 - `destroy()`
 
@@ -296,6 +307,8 @@ Adapters must implement:
 - Apply debug enablement from `config.debug` (authoritative source).
 - Sync cookie `tdw_atlas_debug` to the applied debug state.
 - For each container:
+  - Resolve adapter key from `maps[mapId].adapter`.
+  - Create adapter instance via `window.TDW.Atlas.Adapter.create(...)`.
   - Resolve map entry (`maps[mapId]`) and view preset (`views[viewId]`).
   - Fetch GeoJSON (or pass URL to adapter if configured later).
   - Create a Core instance and call `core.init(...)` with adapter + config + el.
@@ -336,6 +349,7 @@ Adapters must implement:
 
 ### Rule
 - No reliance on globals like `window.L`.
+- Leaflet integration is strict 2.x (no 1.x constructor/factory fallback).
 
 ---
 
@@ -413,18 +427,17 @@ Required dependency graph for predictable logging and runtime:
 1. `tdw-bridge`
 2. `tdw-logger`
 3. `tdw-atlas-cookie-ops`
-4. `tdw-atlas-api`
+4. `tdw-atlas-adapter`
 5. `tdw-atlas-core`
-6. `tdw-atlas-leaflet`
-7. `tdw-atlas-boot`
+6. `tdw-atlas-boot`
 
 Rules:
 
 - For static/startup-critical modules, this PHP dependency graph is the authoritative load order.
-- `tdw-atlas-cookie-ops` must run before API/Core/Leaflet to allow early logging from cookie state.
+- `tdw-atlas-cookie-ops` must run before Adapter/Core/Boot to allow early logging from cookie state.
 - `tdw-atlas-boot` must run last to apply authoritative config and start orchestration.
 - Any new module that emits `dlog`/`dwarn` during module evaluation must depend on `tdw-logger` and `tdw-atlas-cookie-ops`.
-- Dynamic import authority is owned by explicit `import()` call sites (currently Leaflet adapter for Leaflet vendor module).
+- Dynamic import authority is owned by explicit `import()` call sites (Adapter Factory for adapter modules, Leaflet adapter for Leaflet vendor module).
 - Initiators:
   - PHP enqueue initiates shared + atlas module loading.
   - `tdw-bridge` initiates eager shared vendor contracts.

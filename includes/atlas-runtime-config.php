@@ -25,6 +25,14 @@ function tdw_atlas_normalize_vendor($candidate, $defaults) {
   );
 }
 
+function tdw_atlas_normalize_adapter_key($candidate, $fallback = 'leaflet') {
+  $adapter = strtolower(trim((string) $candidate));
+  if ($adapter === '') {
+    $adapter = strtolower(trim((string) $fallback));
+  }
+  return $adapter !== '' ? $adapter : 'leaflet';
+}
+
 function tdw_atlas_get_db_settings_or_default($defaults) {
   $stored = get_option(TDW_ATLAS_OPTION_SETTINGS, array());
   $candidate = is_array($stored) ? $stored : array();
@@ -43,7 +51,7 @@ function tdw_atlas_get_db_maps_or_default($defaults) {
 
   $table = tdw_atlas_table_maps();
   $rows = $wpdb->get_results(
-    "SELECT map_key, geojson_path, view_key FROM {$table} WHERE is_active = 1 ORDER BY sort_order ASC, id ASC",
+    "SELECT map_key, geojson_path, view_key, adapter_key FROM {$table} WHERE is_active = 1 ORDER BY sort_order ASC, id ASC",
     ARRAY_A
   );
 
@@ -61,7 +69,11 @@ function tdw_atlas_get_db_maps_or_default($defaults) {
     $geojson = trim((string) ($row['geojson_path'] ?? ''));
     if ($key === '' || $geojson === '') continue;
 
-    $item = array('geojson' => $geojson);
+    $default_adapter = is_array($defaults[$key] ?? null) ? ($defaults[$key]['adapter'] ?? 'leaflet') : 'leaflet';
+    $item = array(
+      'geojson' => $geojson,
+      'adapter' => tdw_atlas_normalize_adapter_key($row['adapter_key'] ?? '', $default_adapter),
+    );
     $view_key = trim((string) ($row['view_key'] ?? ''));
     if ($view_key !== '') $item['view'] = $view_key;
     $maps[$key] = $item;

@@ -2,14 +2,14 @@
 /**
  * Plugin Name: TDW – Atlas Engine
  * Description: Minimal atlas plugin (Leaflet + TDW Atlas boot) for rendering GeoJSON maps via shortcode.
- * Version: 0.1.2
+ * Version: 0.1.3
  * Author: Justin Errica
  */
 
 if (!defined('ABSPATH')) exit;
 
-const TDW_ATLAS_PLUGIN_VERSION = '0.1.2';
-const TDW_ATLAS_DB_SCHEMA_VERSION = 1;
+const TDW_ATLAS_PLUGIN_VERSION = '0.1.3';
+const TDW_ATLAS_DB_SCHEMA_VERSION = 2;
 const TDW_ATLAS_OPTION_SETTINGS = 'tdw_atlas_settings';
 const TDW_ATLAS_OPTION_SYSTEM = 'tdw_atlas_system';
 const TDW_ATLAS_PLUGIN_FILE = __FILE__;
@@ -18,7 +18,7 @@ const TDW_ATLAS_PLUGIN_FILE = __FILE__;
    Helpers
    ============================================================ */
 
-function tdw_atlas_asset_ver($abs_path, $fallback = '0.1.2') {
+function tdw_atlas_asset_ver($abs_path, $fallback = '0.1.3') {
   return file_exists($abs_path) ? (string) filemtime($abs_path) : $fallback;
 }
 
@@ -41,7 +41,6 @@ function tdw_atlas_enqueue_vendor_leaflet() {
   $base_path = plugin_dir_path(__FILE__) . 'assets/vendor/leaflet/2.0.0-alpha-2.1/';
   $base_url  = plugin_dir_url(__FILE__)  . 'assets/vendor/leaflet/2.0.0-alpha-2.1/';
 
-  $js_file  = $base_path . 'leaflet-src.js';
   $css_file = $base_path . 'leaflet.css';
 
   // Leaflet CSS
@@ -70,21 +69,25 @@ function tdw_shared_enqueue_assets() {
   $tdw_logger_rel = 'assets/shared/tdw-logger.js';
   $tdw_logger_abs = $base_dir . $tdw_logger_rel;
 
-  wp_enqueue_script_module(
-    'tdw-bridge',
-    $base_url . $tdw_bridge_rel,
-    array(),
-    tdw_atlas_asset_ver($tdw_bridge_abs),
-    ['in_footer' => true]
-  );
+  if (!wp_script_is('tdw-bridge', 'enqueued') && !wp_script_is('tdw-bridge', 'done')) {
+    wp_enqueue_script_module(
+      'tdw-bridge',
+      $base_url . $tdw_bridge_rel,
+      array(),
+      tdw_atlas_asset_ver($tdw_bridge_abs),
+      ['in_footer' => true]
+    );
+  }
 
-  wp_enqueue_script_module(
-    'tdw-logger',
-    $base_url . $tdw_logger_rel,
-    array('tdw-bridge'),
-    tdw_atlas_asset_ver($tdw_logger_abs),
-    ['in_footer' => true]
-  );
+  if (!wp_script_is('tdw-logger', 'enqueued') && !wp_script_is('tdw-logger', 'done')) {
+    wp_enqueue_script_module(
+      'tdw-logger',
+      $base_url . $tdw_logger_rel,
+      array('tdw-bridge'),
+      tdw_atlas_asset_ver($tdw_logger_abs),
+      ['in_footer' => true]
+    );
+  }
 
 }
 
@@ -105,64 +108,61 @@ function tdw_atlas_enqueue_assets() {
   );
 
   // Atlas scripts
-  $atlas_api_rel   = 'assets/js/atlas-api.js';
+  $atlas_adapter_rel = 'assets/js/atlas-adapter.js';
   $atlas_core_rel  = 'assets/js/atlas-core.js';
-  $atlas_leaflet_rel = 'assets/js/atlas-leaflet.js';
   $atlas_cookie_ops_rel = 'assets/js/helpers/atlas-cookie-ops.js';
   $atlas_boot_rel = 'assets/js/atlas-boot.js';
 
-  $atlas_api_abs   = $base_dir . $atlas_api_rel;
+  $atlas_adapter_abs = $base_dir . $atlas_adapter_rel;
   $atlas_core_abs  = $base_dir . $atlas_core_rel;
-  $atlas_leaflet_abs = $base_dir . $atlas_leaflet_rel;
   $atlas_cookie_ops_abs = $base_dir . $atlas_cookie_ops_rel;
   $atlas_boot_abs = $base_dir . $atlas_boot_rel;
 
-  wp_enqueue_script_module(
-    'tdw-atlas-cookie-ops',
-    $base_url . $atlas_cookie_ops_rel,
-    array('tdw-bridge', 'tdw-logger'),
-    tdw_atlas_asset_ver($atlas_cookie_ops_abs),
-    ['in_footer' => true]
-  );
-
-  wp_enqueue_script_module(
-    'tdw-atlas-api',
-    $base_url . $atlas_api_rel,
-    array('tdw-logger', 'tdw-atlas-cookie-ops'),
-    tdw_atlas_asset_ver($atlas_api_abs),
-    ['in_footer' => true]
-  );
-
-  wp_enqueue_script_module(
-    'tdw-atlas-core',
-    $base_url . $atlas_core_rel,
-    array('tdw-atlas-api', 'tdw-logger', 'tdw-atlas-cookie-ops'),
-    tdw_atlas_asset_ver($atlas_core_abs),
-    ['in_footer' => true]
-  );
-
-  wp_enqueue_script_module(
-    'tdw-atlas-leaflet',
-    $base_url . $atlas_leaflet_rel,
-    array('tdw-atlas-api', 'tdw-logger', 'tdw-atlas-cookie-ops'),
-    tdw_atlas_asset_ver($atlas_leaflet_abs),
-    ['in_footer' => true]
-  );
-
-  wp_enqueue_script_module(
-    'tdw-atlas-boot',
-    $base_url . $atlas_boot_rel,
-    array(
-      'tdw-atlas-api',
-      'tdw-atlas-core',
-      'tdw-atlas-leaflet',
+  if (!wp_script_is('tdw-atlas-cookie-ops', 'enqueued') && !wp_script_is('tdw-atlas-cookie-ops', 'done')) {
+    wp_enqueue_script_module(
       'tdw-atlas-cookie-ops',
-      'tdw-logger',
-      'tdw-bridge'
-    ),
-    tdw_atlas_asset_ver($atlas_boot_abs),
-    ['in_footer' => true]
-  );
+      $base_url . $atlas_cookie_ops_rel,
+      array('tdw-bridge', 'tdw-logger'),
+      tdw_atlas_asset_ver($atlas_cookie_ops_abs),
+      ['in_footer' => true]
+    );
+  }
+
+  if (!wp_script_is('tdw-atlas-adapter', 'enqueued') && !wp_script_is('tdw-atlas-adapter', 'done')) {
+    wp_enqueue_script_module(
+      'tdw-atlas-adapter',
+      $base_url . $atlas_adapter_rel,
+      array('tdw-logger', 'tdw-atlas-cookie-ops'),
+      tdw_atlas_asset_ver($atlas_adapter_abs),
+      ['in_footer' => true]
+    );
+  }
+
+  if (!wp_script_is('tdw-atlas-core', 'enqueued') && !wp_script_is('tdw-atlas-core', 'done')) {
+    wp_enqueue_script_module(
+      'tdw-atlas-core',
+      $base_url . $atlas_core_rel,
+      array('tdw-atlas-adapter', 'tdw-logger', 'tdw-atlas-cookie-ops'),
+      tdw_atlas_asset_ver($atlas_core_abs),
+      ['in_footer' => true]
+    );
+  }
+
+  if (!wp_script_is('tdw-atlas-boot', 'enqueued') && !wp_script_is('tdw-atlas-boot', 'done')) {
+    wp_enqueue_script_module(
+      'tdw-atlas-boot',
+      $base_url . $atlas_boot_rel,
+      array(
+        'tdw-atlas-adapter',
+        'tdw-atlas-core',
+        'tdw-atlas-cookie-ops',
+        'tdw-logger',
+        'tdw-bridge'
+      ),
+      tdw_atlas_asset_ver($atlas_boot_abs),
+      ['in_footer' => true]
+    );
+  }
 }
 // TODO: For MVP, assets are enqueued only when the shortcode renders.
 // In the future, we need a global loader for global functions / admin UI, etc.
@@ -192,7 +192,6 @@ function tdw_atlas_shortcode($atts = array()) {
     'id' => '',
   ), $atts, 'tdw_atlas');
 
-  $plugin_url  = plugin_dir_url(__FILE__);
   $config_url  = rest_url('tdw-atlas/v1/config');
 
   // Minimal contract: PHP does not validate config or map ids.

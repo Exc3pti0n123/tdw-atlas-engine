@@ -7,6 +7,14 @@ function tdw_atlas_table_maps() {
   return $wpdb->prefix . 'tdw_atlas_maps';
 }
 
+function tdw_atlas_db_normalize_adapter_key($value, $fallback = 'leaflet') {
+  $key = strtolower(trim((string) $value));
+  if ($key === '') {
+    $key = strtolower(trim((string) $fallback));
+  }
+  return $key !== '' ? $key : 'leaflet';
+}
+
 function tdw_atlas_seed_db_from_defaults_if_needed() {
   global $wpdb;
 
@@ -31,6 +39,7 @@ function tdw_atlas_seed_db_from_defaults_if_needed() {
     $geojson = trim((string) ($map['geojson'] ?? ''));
     if ($key === '' || $geojson === '') continue;
     $view = trim((string) ($map['view'] ?? ''));
+    $adapter = tdw_atlas_db_normalize_adapter_key($map['adapter'] ?? 'leaflet');
     $wpdb->insert(
       $table,
       array(
@@ -38,12 +47,13 @@ function tdw_atlas_seed_db_from_defaults_if_needed() {
         'label' => ucwords(str_replace(array('-', '_'), ' ', $key)),
         'geojson_path' => $geojson,
         'view_key' => $view,
+        'adapter_key' => $adapter,
         'is_active' => 1,
         'sort_order' => 0,
         'created_at' => current_time('mysql', true),
         'updated_at' => current_time('mysql', true),
       ),
-      array('%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s')
+      array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s')
     );
   }
 }
@@ -59,6 +69,7 @@ function tdw_atlas_db_install_or_upgrade() {
     label VARCHAR(191) NOT NULL,
     geojson_path TEXT NOT NULL,
     view_key VARCHAR(64) NULL DEFAULT '',
+    adapter_key VARCHAR(64) NOT NULL DEFAULT 'leaflet',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL,
@@ -70,6 +81,9 @@ function tdw_atlas_db_install_or_upgrade() {
 
   require_once ABSPATH . 'wp-admin/includes/upgrade.php';
   dbDelta($sql);
+
+  // Keep legacy rows valid after schema upgrade.
+  $wpdb->query("UPDATE {$table} SET adapter_key = 'leaflet' WHERE adapter_key IS NULL OR adapter_key = ''");
 
   $system = get_option(TDW_ATLAS_OPTION_SYSTEM, array());
   if (!is_array($system)) $system = array();
