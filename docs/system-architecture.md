@@ -1,0 +1,50 @@
+# System Architecture
+
+This is the top-level architecture document for TDW Atlas Engine.
+
+## System Boundaries
+
+1. WordPress/PHP side:
+- plugin bootstrap (`tdw-atlas-engine.php`)
+- DB/config assembly (`includes/*`)
+- runtime config endpoint (`/wp-json/tdw-atlas/v1/config`)
+
+2. Browser/JS side:
+- shared modules (`tdw-bridge`, `tdw-logger`)
+- atlas modules (`cookie-ops`, `adapter factory`, `core`, `boot`)
+- concrete renderer adapter modules loaded dynamically (`assets/js/adapters/*`)
+
+## Runtime Model
+
+1. PHP renders container and enqueues startup-critical modules.
+2. Boot loads runtime config once and iterates containers.
+3. Boot resolves map entry and adapter key.
+4. Adapter factory imports concrete adapter module and creates instance.
+5. Core initializes with adapter instance per container.
+6. Adapter renders or emits fail-fast error per container.
+
+## Source-of-Truth Policy
+
+1. Runtime/public contracts:
+- `docs/contracts.md`
+
+2. Process/merge policy:
+- `docs/process/merge-strategy.md`
+
+3. Architecture decision record:
+- `docs/adr/`
+
+## Deep-Dive Docs
+
+- `architecture/runtime-flow.md`
+- `architecture/module-graph.md`
+- `architecture/config-lifecycle.md`
+- `architecture/adapter-lifecycle.md`
+- `architecture/php-runtime-boundary.md`
+
+## Diagram Set
+
+- `diagrams/system-environment.md`
+- `diagrams/module-dependencies.md`
+- `diagrams/runtime-sequence.md`
+- `diagrams/config-dataflow.md`

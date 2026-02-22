@@ -2,13 +2,13 @@
 /**
  * Plugin Name: TDW – Atlas Engine
  * Description: Minimal atlas plugin (Leaflet + TDW Atlas boot) for rendering GeoJSON maps via shortcode.
- * Version: 0.1.3
+ * Version: 0.1.4
  * Author: Justin Errica
  */
 
 if (!defined('ABSPATH')) exit;
 
-const TDW_ATLAS_PLUGIN_VERSION = '0.1.3';
+const TDW_ATLAS_PLUGIN_VERSION = '0.1.4';
 const TDW_ATLAS_DB_SCHEMA_VERSION = 2;
 const TDW_ATLAS_OPTION_SETTINGS = 'tdw_atlas_settings';
 const TDW_ATLAS_OPTION_SYSTEM = 'tdw_atlas_system';
@@ -18,7 +18,7 @@ const TDW_ATLAS_PLUGIN_FILE = __FILE__;
    Helpers
    ============================================================ */
 
-function tdw_atlas_asset_ver($abs_path, $fallback = '0.1.3') {
+function tdw_atlas_asset_ver($abs_path, $fallback = '0.1.4') {
   return file_exists($abs_path) ? (string) filemtime($abs_path) : $fallback;
 }
 

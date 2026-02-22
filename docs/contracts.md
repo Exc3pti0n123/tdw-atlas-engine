@@ -89,7 +89,7 @@ Notes:
 ### Minimal schema (MVP)
 ```json
 {
-  "meta": { "engine": "tdw-atlas-engine", "version": "0.1.3" },
+  "meta": { "engine": "tdw-atlas-engine", "version": "0.1.4" },
   "debug": true,
   "vendor": {
     "leafletJs": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet-src.js",
@@ -443,3 +443,65 @@ Rules:
   - `tdw-bridge` initiates eager shared vendor contracts.
   - `tdw-atlas-cookie-ops` initiates early log scope enablement from cookie.
   - `tdw-atlas-boot` initiates config read, final log-state apply, and map boot.
+
+---
+
+## Contract 18 — AI Context Pack and Documentation Duty
+
+### Mandatory AI context pack before planning/coding/docs updates
+
+1. `docs/contracts.md`
+2. `docs/system-architecture.md`
+3. `docs/process/merge-strategy.md`
+4. Latest merge capsule in `docs/context/merges/`
+
+### Mandatory behavior
+
+- AI must preserve module structure convention (Contract 3).
+- AI must update matching docs when runtime/contracts/process are affected.
+- AI must declare test status explicitly:
+  - `implemented`
+  - `partially tested`
+  - `done tested`
+
+Reference:
+- `docs/onboarding/machine.md`
+
+---
+
+## Contract 19 — Merge Context Capsule
+
+For non-trivial merged PRs, one merge capsule is required:
+
+- Path: `docs/context/merges/YYYY-MM-DD-pr-<number>-<slug>.md`
+
+Required fields:
+
+1. Scope
+2. Changed areas
+3. Decision summary
+4. Contract impact
+5. Tests and status
+6. Risks/open follow-ups
+7. Links to issue/PR/ADR
+
+Template:
+- `docs/templates/context-capsule-template.md`
+
+---
+
+## Contract 20 — ADR Requirement (v0.1.4+)
+
+From v0.1.4 onward, architecture-affecting changes require:
+
+1. a new ADR in `docs/adr/`, or
+2. explicit `No ADR required` justification in merge capsule.
+
+ADR naming:
+- `ADR-XXXX-short-title.md`
+
+ADR status lifecycle:
+- Proposed
+- Accepted
+- Superseded
+- Deprecated
