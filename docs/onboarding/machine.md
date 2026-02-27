@@ -9,6 +9,13 @@ This file defines mandatory behavior for AI contributors.
 3. `../process/merge-strategy.md`
 4. latest merge capsule in `../context/merges/`
 
+## Required Quick-Find Paths (Use Before Editing Modules)
+
+1. `../templates/module-template.md`
+2. `../templates/module-template-custom.md`
+3. `../../assets/shared/tdw-logger.js`
+4. `../../assets/js/helpers/atlas-shared.js`
+
 ## Mandatory Responsibilities
 
 1. Preserve and enforce runtime contracts.
@@ -17,17 +24,19 @@ This file defines mandatory behavior for AI contributors.
 - `FUNCTIONS`
 - `PUBLIC API`
 - `AUTO-RUN`
-3. Keep docs synchronized with relevant changes:
+3. Use logger boilerplate in every Atlas module:
+- `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+4. Keep docs synchronized with relevant changes:
 - contracts
 - architecture docs
 - ADR
 - version references
 - merge capsule
-4. Declare test status clearly in outputs:
+5. Declare test status clearly in outputs:
 - `implemented`
 - `partially tested`
 - `done tested`
-5. Run and report non-UI suite for implementation changes:
+6. Run and report non-UI suite for implementation changes:
 - `npm run test:non-ui`
 - reference: `../process/non-ui-testing.md`
 

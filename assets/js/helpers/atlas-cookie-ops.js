@@ -9,8 +9,9 @@
    - window.TDW.Atlas.CookieOps
      - getDebugFlag()
      - setDebugFlag(enabled, options?)
-     - initDebugFromCookie()
+   - initDebugFromCookie()
    ============================================================ */
+
 
 /* ============================================================
    1) MODULE INIT
@@ -23,15 +24,11 @@ window.TDW.Atlas.CookieOps = window.TDW.Atlas.CookieOps || {};
 const SCOPE = 'ATLAS COOKIE-OPS';
 const existing = window.TDW.Atlas.CookieOps;
 
-const {
-  log: _log = () => {},
-  warn: _warn = () => {},
-  error: _error = (scope, el, message, ...meta) => console.error('[TDW ATLAS FATAL]', message, ...meta),
-} = window?.TDW?._logger || {};
-
-const dlog = (...args) => _log(SCOPE, ...args);
-const dwarn = (...args) => _warn(SCOPE, ...args);
-const derror = (message, ...meta) => _error(SCOPE, null, message, ...meta);
+const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
+  dlog: () => {},
+  dwarn: () => {},
+  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+};
 
 const DEFAULT_COOKIE_DAYS = 30;
 const DEBUG_COOKIE_NAME = 'tdw_atlas_debug';

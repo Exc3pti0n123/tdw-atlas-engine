@@ -1,6 +1,6 @@
-# TDW Atlas Module Template
+# TDW Atlas Module Template (Custom Sections)
 
-Use this as the default scaffold for new Atlas JS modules.
+Use this template when a module needs explicit custom/internal sections beyond the default structure.
 
 ```js
 /* ============================================================
@@ -39,14 +39,37 @@ const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);
    ============================================================ */
 
 /**
- * <Short description of what this function does.>
- *
- * @param {<type>} <name> - <param description>
- * @returns {<type>} <return description>
+ * <Short description>
+ * @param {<type>} <name>
+ * @returns {<type>}
  */
 function exampleFunction() {
-  // Implement module logic.
+  // Core module logic.
 }
+
+/* ============================================================
+   2.1) CUSTOM INPUT CONTRACT
+   ============================================================ */
+
+// Define accepted input shape, required fields, and normalization rules.
+
+/* ============================================================
+   2.2) CUSTOM STATE MODEL
+   ============================================================ */
+
+// Define module-local state fields and ownership.
+
+/* ============================================================
+   2.3) CUSTOM ERROR POLICY
+   ============================================================ */
+
+// Define fail-fast and warn-only cases for this module.
+
+/* ============================================================
+   2.4) CUSTOM DIAGNOSTICS
+   ============================================================ */
+
+// Define runtime diagnostics and audit payload shape.
 
 /* ============================================================
    3) PUBLIC API
@@ -63,15 +86,9 @@ if (typeof api.exampleFunction !== 'function') api.exampleFunction = exampleFunc
 // exampleFunction();
 ```
 
-## Notes
+## Custom Section Rules
 
-- Keep `MODULE INIT` minimal: no network, no DOM scanning, no heavy logic.
-- Put all behavior in `FUNCTIONS`; only expose what is needed in `PUBLIC API`.
-- `AUTO-RUN` is optional and should be used only for required startup wiring.
-- Logger boilerplate is mandatory in this exact form:
-  - `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
-- Direct `window.TDW._logger.log/warn/error` usage is reserved for:
-  - `assets/shared/tdw-logger.js`
-- If module-level `dlog`/`dwarn` calls exist, ensure PHP module dependencies guarantee logger availability.
-- For a version with explicit custom sections, use:
-  - `docs/templates/module-template-custom.md`
+1. Keep section numbering stable (`2.1`, `2.2`, ...).
+2. Do not add custom sections to `MODULE INIT` or `AUTO-RUN`.
+3. Any new custom section must be listed in the module header comment.
+4. If the module does not need custom sections, use `docs/templates/module-template.md`.

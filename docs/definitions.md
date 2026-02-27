@@ -21,6 +21,12 @@
   - Include/exclude policy independent from grouping (`map override > global baseline > default`).
 - Preprocess Profile:
   - Adapter-specific geometry processing policy (e.g. multipolygon strategy).
+- Scoped Logger Helper:
+  - `assets/shared/tdw-logger.js`.
+  - Exposes `window.TDW.Logger.createScopedLogger(SCOPE)` for standardized `dlog/dwarn/derror`.
+- Shared Helper Module:
+  - `assets/js/helpers/atlas-shared.js`.
+  - Hosts shared normalization helpers used across Boot/Pipeline/Adapter modules.
 - Core Instance:
   - Instance from `window.TDW.Atlas.Core.create()` for one container.
 - Merge Capsule:

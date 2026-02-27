@@ -10,6 +10,13 @@
    - prepareRuntimeBundle({ mapData, mapMeta, mapConfig })
    ============================================================ */
 
+import {
+  isPlainObject,
+  normalizeBool,
+  normalizeCountryCode,
+  normalizeGroupId,
+} from '../helpers/atlas-shared.js';
+
 /* ============================================================
    1) MODULE INIT
    ============================================================ */
@@ -20,15 +27,11 @@ root.TDW.Atlas = root.TDW.Atlas || {};
 
 const SCOPE = 'ATLAS MAP-PIPELINE';
 
-const {
-  log: _log = () => {},
-  warn: _warn = () => {},
-  error: _error = (scope, el, message, ...meta) => console.error('[TDW ATLAS FATAL]', message, ...meta),
-} = root?.TDW?._logger || {};
-
-const dlog = (...args) => _log(SCOPE, ...args);
-const dwarn = (...args) => _warn(SCOPE, ...args);
-const derror = (message, ...meta) => _error(SCOPE, null, message, ...meta);
+const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
+  dlog: () => {},
+  dwarn: () => {},
+  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+};
 
 const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
 const GROUP_MODE_SET = 'set';
@@ -64,30 +67,6 @@ const DEFAULT_GEOMETRY_QUALITY = Object.freeze({
 
 /**
  * @param {unknown} value
- * @returns {boolean}
- */
-function isPlainObject(value) {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-/**
- * @param {unknown} value
- * @returns {string}
- */
-function normalizeCountryCode(value) {
-  return String(value || '').trim().toUpperCase();
-}
-
-/**
- * @param {unknown} value
- * @returns {string}
- */
-function normalizeGroupId(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
-/**
- * @param {unknown} value
  * @param {string} fallback
  * @returns {string}
  */
@@ -101,15 +80,6 @@ function normalizeDatasetKey(value, fallback = 'world-v1') {
  * @param {boolean} fallback
  * @returns {boolean}
  */
-function normalizeBool(value, fallback = false) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value === 1;
-  const raw = String(value || '').trim().toLowerCase();
-  if (raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on') return true;
-  if (raw === '0' || raw === 'false' || raw === 'no' || raw === 'off') return false;
-  return Boolean(fallback);
-}
-
 /**
  * @param {object} properties
  * @param {Record<string, string>} countryCodeAliases

@@ -11,6 +11,7 @@
    ============================================================ */
 
 import { fetchPreview } from './atlas-preview-content.js';
+import { isPlainObject, normalizeBool } from '../helpers/atlas-shared.js';
 
 /* ============================================================
    1) MODULE INIT
@@ -30,41 +31,15 @@ const DEFAULT_CONFIG = Object.freeze({
   switchToBottomMaxWHRatio: DEFAULT_SWITCH_RATIO,
 });
 
-const {
-  log: _log = () => {},
-  warn: _warn = () => {},
-  error: _error = (scope, el, message, ...meta) => console.error('[TDW ATLAS FATAL]', message, ...meta),
-} = window?.TDW?._logger || {};
-
-const dlog = (...args) => _log(SCOPE, ...args);
-const dwarn = (...args) => _warn(SCOPE, ...args);
-const derror = (message, ...meta) => _error(SCOPE, null, message, ...meta);
+const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
+  dlog: () => {},
+  dwarn: () => {},
+  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+};
 
 /* ============================================================
    2) FUNCTIONS
    ============================================================ */
-
-/**
- * @param {unknown} value
- * @returns {boolean}
- */
-function isPlainObject(value) {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-/**
- * @param {unknown} value
- * @param {boolean} fallback
- * @returns {boolean}
- */
-function normalizeBool(value, fallback) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value === 1;
-  const raw = String(value || '').trim().toLowerCase();
-  if (raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on') return true;
-  if (raw === '0' || raw === 'false' || raw === 'no' || raw === 'off') return false;
-  return Boolean(fallback);
-}
 
 /**
  * @param {unknown} candidate

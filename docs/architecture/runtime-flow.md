@@ -12,30 +12,32 @@ Linear startup chain: `Boot -> Pipeline -> Core -> Adapter`.
 6. Boot resolves `mapId` and `maps.{id}.adapter`.
 7. Adapter factory imports concrete adapter module lazily.
 8. Factory returns validated adapter instance.
-9. Boot fetches `maps.{id}.geojson` only.
-10. Boot builds `mapMeta` from runtime config (`grouping`, `whitelist`, `preprocess`, `regionLayer`).
-11. Boot forwards adapter-facing map config via `adapterConfig.map` (including `focus` + `ui.preview`).
-12. Boot runs runtime pipeline `prepareRuntimeBundle({ mapData, mapMeta, mapConfig })` from `assets/js/runtime/atlas-map-pipeline.js`.
+9. Boot computes a runtime-bundle cache key from effective map signature (`mapId`, base URL, `geojson`, `datasetKey`, `grouping`, `whitelist`, `preprocess`, `regionLayer`).
+10. Boot fetches `maps.{id}.geojson` only on cache miss and runs the runtime pipeline once per key.
+11. Boot builds `mapMeta` from runtime config (`grouping`, `whitelist`, `preprocess`, `regionLayer`).
+12. Boot forwards adapter-facing map config via `adapterConfig.map` (including `focus` + `ui.preview`).
 13. Boot creates core instance and calls `core.init({ adapter, el, mapData, mapMeta, adapterConfig })` where `mapData` is the prepared runtime bundle.
 14. Adapter initializes preview overlay via adapter-agnostic UI module (`assets/js/ui/atlas-preview.js`).
-15. Adapter enters deterministic stage machine:
+15. Adapter performs renderer-local vendor validation/loading (Leaflet JS/CSS), not Boot.
+16. Adapter enters deterministic stage machine:
     - `world`: full region-status view.
     - `region`: active region expanded to countries, all other regions remain region-status.
     - `country`: same hybrid view as `region`, plus selected country.
-16. Region click in `world` enters `region` stage for the clicked group.
-17. In hybrid stages (`region`/`country`), click routing is feature-kind based:
+17. Region click in `world` enters `region` stage for the clicked group.
+18. In hybrid stages (`region`/`country`), click routing is feature-kind based:
     - `tdwHybridKind='country'`: country selection in active region.
     - `tdwHybridKind='region'`: immediate region switch (resolves #34 by construction).
-18. Sea click uses two-step back navigation:
+19. Sea click uses two-step back navigation:
     - `country -> region` (clear selected country)
     - `region -> world`
     - `world -> no-op`
-19. Preview lifecycle is stage-driven only:
+20. Stage transitions are tokenized; only latest transition token may commit after `moveend`/fallback.
+21. Preview lifecycle is stage-driven only:
     - `world`: preview closed.
     - `region`: region preview if enabled.
     - `country`: country preview if enabled.
     - preview close button => world stage.
-20. Preview content is fetched from `/wp-json/tdw-atlas/v1/preview` with local fallback on request failure.
+22. Preview content is fetched from `/wp-json/tdw-atlas/v1/preview` with local fallback on request failure.
 
 ## Failure Strategy
 

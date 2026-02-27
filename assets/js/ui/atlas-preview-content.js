@@ -9,6 +9,7 @@
    - fetchPreview({ mapId, scope, key, titleHint })
    ============================================================ */
 
+
 /* ============================================================
    1) MODULE INIT
    ============================================================ */
@@ -19,15 +20,11 @@ window.TDW.Atlas.UI = window.TDW.Atlas.UI || {};
 
 const SCOPE = 'ATLAS PREVIEW-CONTENT';
 
-const {
-  log: _log = () => {},
-  warn: _warn = () => {},
-  error: _error = (scope, el, message, ...meta) => console.error('[TDW ATLAS FATAL]', message, ...meta),
-} = window?.TDW?._logger || {};
-
-const dlog = (...args) => _log(SCOPE, ...args);
-const dwarn = (...args) => _warn(SCOPE, ...args);
-const derror = (message, ...meta) => _error(SCOPE, null, message, ...meta);
+const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
+  dlog: () => {},
+  dwarn: () => {},
+  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+};
 
 /* ============================================================
    2) FUNCTIONS

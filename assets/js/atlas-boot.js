@@ -25,20 +25,18 @@ import { prepareRuntimeBundle } from './runtime/atlas-map-pipeline.js';
 
 const CONTAINER_SELECTOR = '.tdw-atlas[data-tdw-atlas="1"]';
 const CONFIG_ATTR = 'data-config-url';
+const runtimeBundleCache = new Map();
 
 const SCOPE = 'ATLAS BOOT';
 
-const {
-  log: _log = () => {},
-  warn: _warn = () => {},
-  error: _error = (scope, el, message, ...meta) => console.error('[TDW ATLAS FATAL]', message, ...meta),
-  setDebugEnabled: _setDebug = () => {},
-  isDebugEnabled: _isDebug = () => false,
-} = window?.TDW?._logger || {};
-
-const dlog = (...args) => _log(SCOPE, ...args);
-const dwarn = (...args) => _warn(SCOPE, ...args);
-const derror = (el, message, ...meta) => _error(SCOPE, el || null, message, ...meta);
+const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
+  dlog: () => {},
+  dwarn: () => {},
+  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+};
+const _logger = window?.TDW?._logger || {};
+const _setDebug = typeof _logger.setDebugEnabled === 'function' ? _logger.setDebugEnabled : () => {};
+const _isDebug = typeof _logger.isDebugEnabled === 'function' ? _logger.isDebugEnabled : () => false;
 const cookieOps = window?.TDW?.Atlas?.CookieOps || null;
 
 function setAtlasDebug(enabled) {
@@ -65,6 +63,81 @@ function onReady(callback) {
 /* ============================================================
    2) FUNCTIONS
    ============================================================ */
+
+/**
+ * @param {unknown} value
+ * @returns {unknown}
+ */
+function normalizeForStableStringify(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeForStableStringify(entry));
+  }
+  if (value && typeof value === 'object') {
+    const keys = Object.keys(value).sort();
+    const out = {};
+    for (const key of keys) {
+      out[key] = normalizeForStableStringify(value[key]);
+    }
+    return out;
+  }
+  return value;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+function stableStringify(value) {
+  try {
+    return JSON.stringify(normalizeForStableStringify(value));
+  } catch (_) {
+    return String(value);
+  }
+}
+
+/**
+ * @param {{
+ *   mapId: string,
+ *   configBaseUrl: string,
+ *   mapConfig: object
+ * }} params
+ * @returns {string}
+ */
+function buildRuntimeBundleCacheKey({ mapId, configBaseUrl, mapConfig }) {
+  const signature = {
+    mapId: String(mapId || '').trim(),
+    baseUrl: String(configBaseUrl || '').trim(),
+    geojson: mapConfig?.geojson || '',
+    datasetKey: mapConfig?.datasetKey || '',
+    grouping: mapConfig?.grouping || null,
+    whitelist: mapConfig?.whitelist || null,
+    preprocess: mapConfig?.preprocess || null,
+    regionLayer: mapConfig?.regionLayer || null,
+  };
+  return stableStringify(signature);
+}
+
+/**
+ * @template T
+ * @param {string} cacheKey
+ * @param {() => Promise<T>} factory
+ * @returns {Promise<T>}
+ */
+async function getOrCreateCachedRuntimeBundle(cacheKey, factory) {
+  if (runtimeBundleCache.has(cacheKey)) {
+    return runtimeBundleCache.get(cacheKey);
+  }
+
+  const promise = (async () => factory())();
+  runtimeBundleCache.set(cacheKey, promise);
+
+  try {
+    return await promise;
+  } catch (err) {
+    runtimeBundleCache.delete(cacheKey);
+    throw err;
+  }
+}
 
 /**
  * @param {boolean} enabled
@@ -252,9 +325,6 @@ async function bootOne(el, createCore, createAdapter, shared) {
     return;
   }
 
-  const sourceMapData = await loadJsonResource('GeoJSON', geojsonUrl, el);
-  if (!sourceMapData) return;
-
   const mapMeta = {
     grouping: mapConfig?.grouping || null,
     whitelist: mapConfig?.whitelist || null,
@@ -278,18 +348,23 @@ async function bootOne(el, createCore, createAdapter, shared) {
     dwarn('Configured view key not found in runtime config.', { mapId, viewKey });
   }
 
-  if (!adapterConfig.vendor?.leafletJs) {
-    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue until adapter import fails.
-    derror(el, `Missing vendor.leafletJs in runtime config for map id: ${mapId}.`);
-    return;
-  }
-
+  const runtimeCacheKey = buildRuntimeBundleCacheKey({
+    mapId,
+    configBaseUrl,
+    mapConfig,
+  });
   let runtimeBundle;
   try {
-    runtimeBundle = prepareRuntimeBundle({
-      mapData: sourceMapData,
-      mapMeta,
-      mapConfig,
+    runtimeBundle = await getOrCreateCachedRuntimeBundle(runtimeCacheKey, async () => {
+      const sourceMapData = await loadJsonResource('GeoJSON', geojsonUrl, el);
+      if (!sourceMapData) {
+        throw new Error('GeoJSON load failed before runtime pipeline.');
+      }
+      return prepareRuntimeBundle({
+        mapData: sourceMapData,
+        mapMeta,
+        mapConfig,
+      });
     });
   } catch (err) {
     const reason = String(err?.message || err || 'Unknown pipeline error');

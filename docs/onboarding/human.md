@@ -16,6 +16,16 @@
 - details: `../process/non-ui-testing.md`
 4. Run manual interface testing (visual + interaction feel).
 
+## Quick-Find: Shared Helpers and Templates
+
+1. Module templates:
+- `../templates/module-template.md`
+- `../templates/module-template-custom.md`
+2. Logger helper:
+- `../../assets/shared/tdw-logger.js`
+3. Shared normalizers:
+- `../../assets/js/helpers/atlas-shared.js`
+
 ## How to Start a Task
 
 1. Pick/confirm issue.

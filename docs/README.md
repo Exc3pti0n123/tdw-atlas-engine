@@ -36,6 +36,8 @@ Use this page as the central navigation hub.
 2. `process/release-checklist.md`
 3. `process/quick-checklists.md`
 4. `process/non-ui-testing.md`
+5. `process/code-health-report-v0.2.0-alpha2.md`
+6. `process/code-health-metrics-v0.2.0-alpha2.json`
 
 ## Decision and Context Tracking
 
@@ -46,5 +48,11 @@ Use this page as the central navigation hub.
 ## Templates
 
 1. `templates/module-template.md`
-2. `templates/context-capsule-template.md`
-3. `templates/project-kickoff-template.md`
+2. `templates/module-template-custom.md`
+3. `templates/context-capsule-template.md`
+4. `templates/project-kickoff-template.md`
+
+## Shared Helpers (AI/Contributor Quick Find)
+
+1. `../assets/shared/tdw-logger.js` - shared logger core implementation (`window.TDW.Logger.createScopedLogger(scope)`).
+2. `../assets/js/helpers/atlas-shared.js` - shared normalization helpers (`normalizeBool`, `normalizeCountryCode`, ...).

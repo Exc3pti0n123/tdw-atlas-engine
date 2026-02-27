@@ -16,6 +16,7 @@
    - No adapter module loading.
    ============================================================ */
 
+
 /* ============================================================
    1) MODULE INIT
    ============================================================ */
@@ -26,15 +27,11 @@ window.TDW.Atlas.Core = window.TDW.Atlas.Core || {};
 
 const SCOPE = 'ATLAS CORE';
 
-const {
-  log: _log = () => {},
-  warn: _warn = () => {},
-  error: _error = (scope, el, message, ...meta) => console.error('[TDW ATLAS FATAL]', scope, message, ...meta),
-} = window?.TDW?._logger || {};
-
-const dlog = (...args) => _log(SCOPE, ...args);
-const dwarn = (...args) => _warn(SCOPE, ...args);
-const derror = (el, message, ...meta) => _error(SCOPE, el || null, message, ...meta);
+const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
+  dlog: () => {},
+  dwarn: () => {},
+  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+};
 
 /* ============================================================
    2) FUNCTIONS

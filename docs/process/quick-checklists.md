@@ -10,12 +10,17 @@ Use this page as the fastest pre-flight check.
    - `docs/process/merge-strategy.md`
    - latest merge capsule in `docs/context/merges/`
 2. Confirm changed code follows js file structure (`MODULE INIT`, `FUNCTIONS`, `PUBLIC API`, `AUTO-RUN`).
-3. Run non-UI suite:
+3. Confirm logger boilerplate uses:
+   - `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+4. Confirm modules were created from templates:
+   - `docs/templates/module-template.md`
+   - `docs/templates/module-template-custom.md` (if custom sections are used)
+5. Run non-UI suite:
    - `npm run test:non-ui`
    - details/config: `docs/process/non-ui-testing.md`
-4. Update affected docs (contracts, architecture, ADR, version refs) if behavior/process changed.
-5. Mark local test status clearly: `implemented`, `partially tested`, or `done tested`.
-6. Manual interface testing (human-owned) completed for UI/UX changes.
+6. Update affected docs (contracts, architecture, ADR, version refs) if behavior/process changed.
+7. Mark local test status clearly: `implemented`, `partially tested`, or `done tested`.
+8. Manual interface testing (human-owned) completed for UI/UX changes.
 
 ## Before Merge (Human Trigger)
 

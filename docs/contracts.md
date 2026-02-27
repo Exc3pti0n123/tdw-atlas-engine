@@ -59,6 +59,7 @@ All Atlas JS modules follow the same internal layout:
 
 Reference template:
 - `docs/templates/module-template.md`
+- `docs/templates/module-template-custom.md` (when custom sections are required)
 
 0) **META** (Header Block)
    - Module name and responsibility (1–2 lines)
@@ -75,6 +76,11 @@ Notes:
 - Keep MODULE INIT minimal (no DOM scanning, no network).
 - AUTO-RUN must be the only place that registers event listeners or starts orchestration.
 - Functions in section `2) FUNCTIONS` should use JSDoc (`@param`, `@returns`) for non-trivial behavior.
+- Logger boilerplate is standardized via:
+  - `assets/shared/tdw-logger.js`
+  - `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+- Shared normalization helpers are centralized in:
+  - `assets/js/helpers/atlas-shared.js`
 
 ## Contract 4 — Config Source (JSON bootstrap + DB-backed runtime)
 
@@ -228,10 +234,15 @@ For runtime sequencing see Contract 17.
 ### Routing Rules
 
 - All Atlas modules (Boot, Adapter Factory, Core, Adapters) must use the shared TDW logger:
-  - `window.TDW._logger`
+  - `window.TDW.Logger` (scoped shorthand)
+  - `window.TDW._logger` (core logger backend)
 - The logger is scope-based (e.g. `"ATLAS BOOT"`, `"ATLAS CORE"`).
 - No module may call `console.log` or `console.warn` directly.
 - `console.error` is only allowed as a hard fallback if the logger is unavailable.
+- Atlas module boilerplate must use:
+  - `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+- Direct `window.TDW._logger.log/warn/error` calls are reserved for:
+  - `assets/shared/tdw-logger.js`
 
 Atlas perspective:
 - Atlas consumes the logger as a shared dependency (`tdw-logger`), but does not own logger internals.
@@ -239,6 +250,7 @@ Atlas perspective:
 
 Logging must be done via:
 
+- `window.TDW.Logger.createScopedLogger(scope)` -> `{ dlog, dwarn, derror }`
 - `window.TDW._logger.log(scope, ...)`
 - `window.TDW._logger.warn(scope, ...)`
 - `window.TDW._logger.error(scope, el?, message, ...)`
@@ -392,7 +404,8 @@ Adapters must implement:
   - Resolve adapter key from `maps[mapId].adapter`.
   - Create adapter instance via `window.TDW.Atlas.Adapter.create(...)`.
   - Resolve map entry (`maps[mapId]`) and view preset (`views[viewId]`).
-  - Fetch GeoJSON from `maps[mapId].geojson`.
+  - Compute runtime cache key from effective map signature.
+  - Fetch GeoJSON from `maps[mapId].geojson` on cache miss only.
   - Build `mapMeta` from runtime config (`grouping`, `whitelist`, `preprocess`, `regionLayer`).
   - Build prepared runtime bundle via `assets/js/runtime/atlas-map-pipeline.js` (`prepareRuntimeBundle({ mapData, mapMeta, mapConfig })`).
   - Build adapter runtime config (`vendor`, map config, optional view preset), including `maps.{id}.ui.preview`.
@@ -401,6 +414,7 @@ Adapters must implement:
 ### Non-responsibilities
 - Boot does not contain adapter logic.
 - Boot does not register adapters.
+- Boot does not enforce renderer-specific vendor contracts.
 
 ### Preview REST Endpoint
 - Route: `GET /wp-json/tdw-atlas/v1/preview`
@@ -424,6 +438,7 @@ Adapters must implement:
 ### Rule
 - No reliance on globals like `window.L`.
 - Leaflet integration is strict 2.x (no 1.x constructor/factory fallback).
+- Renderer-specific vendor URL validation is adapter-local (Leaflet adapter path), not Boot-generic.
 
 ---
 

@@ -39,8 +39,11 @@ Atlas JS modules must keep this section layout:
 
 Template:
 - `docs/templates/module-template.md`
+- `docs/templates/module-template-custom.md` (only if custom sections are required)
 
 Non-trivial functions should include JSDoc.
+Logger boilerplate is mandatory:
+- `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
 
 ## Validation Before PR
 

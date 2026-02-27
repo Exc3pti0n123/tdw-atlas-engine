@@ -21,8 +21,9 @@ This is the top-level architecture document for TDW Atlas Engine.
 3. Boot resolves map entry and adapter key.
 4. Adapter factory imports concrete adapter module and creates instance.
 5. Boot loads GeoJSON and forwards DB-assembled `mapMeta` payload per container.
-6. Core initializes with adapter instance per container.
-7. Adapter prepares/filters map data and renders or emits fail-fast error per container.
+6. Boot runs the runtime pipeline to build a prepared runtime bundle.
+7. Core initializes with adapter instance per container.
+8. Adapter renders prepared map bundle or emits fail-fast error per container.
 
 ## Source-of-Truth Policy
 

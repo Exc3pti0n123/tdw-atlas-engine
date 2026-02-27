@@ -9,6 +9,7 @@
    - window.TDW.Atlas.Adapter.create({ adapterKey, mapId, el })
    ============================================================ */
 
+
 /* ============================================================
    1) MODULE INIT
    ============================================================ */
@@ -20,15 +21,11 @@ window.TDW.Atlas.Adapter = window.TDW.Atlas.Adapter || {};
 const SCOPE = 'ATLAS ADAPTER';
 const existing = window.TDW.Atlas.Adapter;
 
-const {
-  log: _log = () => {},
-  warn: _warn = () => {},
-  error: _error = (scope, el, message, ...meta) => console.error('[TDW ATLAS FATAL]', message, ...meta),
-} = window?.TDW?._logger || {};
-
-const dlog = (...args) => _log(SCOPE, ...args);
-const dwarn = (...args) => _warn(SCOPE, ...args);
-const derror = (message, ...meta) => _error(SCOPE, null, message, ...meta);
+const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
+  dlog: () => {},
+  dwarn: () => {},
+  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+};
 
 const REQUIRED_ADAPTER_METHODS = ['init', 'onResize', 'destroy'];
 const ADAPTER_MODULES = {

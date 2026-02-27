@@ -19,6 +19,27 @@
 2. `onResize(activeRegionId)`
 3. `destroy()`
 
+## Leaflet Internal Module Split (#38)
+
+`assets/adapter/leaflet/atlas-leaflet.js` is orchestration only and delegates to:
+
+1. `assets/adapter/leaflet/atlas-leaflet-focus.js`
+   - Antimeridian-aware bounds collection.
+   - Stage padding resolution.
+   - Fit diagnostics helpers.
+2. `assets/adapter/leaflet/atlas-leaflet-layers.js`
+   - Layer feature accessors.
+   - Group/country indexes.
+   - Hybrid map assembly (`tdwHybridKind`).
+3. `assets/adapter/leaflet/atlas-leaflet-style.js`
+   - Stage/kind style policy and style application helpers.
+4. `assets/adapter/leaflet/atlas-leaflet-events.js`
+   - World/hybrid hover routing.
+   - World/hybrid click routing.
+5. `assets/adapter/leaflet/atlas-leaflet-transition.js`
+   - Tokenized transition controller.
+   - Atomic stage commit guard.
+
 ## Runtime Pipeline Boundary
 
 1. Boot delegates data preparation to `assets/js/runtime/atlas-map-pipeline.js`.
@@ -42,7 +63,11 @@
 5. Sea click is two-step:
    - `country -> region`
    - `region -> world`
-6. Stage transitions commit on movement completion (`moveend` + fallback timer), not before.
+6. Stage transitions are tokenized:
+   - every navigation action gets a transition token.
+   - only the latest token may commit.
+   - stale `moveend` callbacks are ignored.
+7. Stage transitions commit on movement completion (`moveend` + fallback timer), not before.
 
 ## Preview Coupling (Leaflet)
 

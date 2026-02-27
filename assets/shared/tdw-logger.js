@@ -26,6 +26,7 @@ const existing = window.TDW._logger || {};
 existing._scopes = existing._scopes || Object.create(null);
 
 const PREFIX = '[TDW]';
+const SCOPE = 'TDW LOGGER';
 
 /* ============================================================
    2) FUNCTIONS
@@ -44,6 +45,16 @@ function normalizeMessage(message) {
   } catch {
     return 'Unknown error.';
   }
+}
+
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+function isElementLike(value) {
+  if (!value) return false;
+  if (typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) return true;
+  return typeof value === 'object' && value !== null && Number.isFinite(Number(value?.nodeType));
 }
 
 /**
@@ -128,15 +139,53 @@ function error(scope, el, message, ...meta) {
   el.appendChild(box);
 }
 
+/**
+ * Create scoped logger shorthand.
+ *
+ * Supports:
+ * - derror(el, message, ...meta)
+ * - derror(message, ...meta)
+ *
+ * @param {string} scope
+ * @returns {{dlog: Function, dwarn: Function, derror: Function}}
+ */
+function createScopedLogger(scope) {
+  const safeScope = String(scope || 'global');
+  const dlog = (...args) => log(safeScope, ...args);
+  const dwarn = (...args) => warn(safeScope, ...args);
+  const derror = (...args) => {
+    if (args.length >= 2 && (args[0] === null || isElementLike(args[0]))) {
+      const [el, message, ...meta] = args;
+      error(safeScope, el || null, message, ...meta);
+      return;
+    }
+    const [message, ...meta] = args;
+    error(safeScope, null, message, ...meta);
+  };
+  return { dlog, dwarn, derror };
+}
+
+const { dlog, dwarn, derror } = createScopedLogger(SCOPE);
+
 /* ============================================================
    3) EXPORT
    ============================================================ */
 
 // Publish/merge onto the stable global object (do not overwrite if already present).
 window.TDW._logger = existing;
+window.TDW.Logger = window.TDW.Logger || {};
 
 if (typeof existing.setDebugEnabled !== 'function') existing.setDebugEnabled = setDebugEnabled;
 if (typeof existing.isDebugEnabled !== 'function') existing.isDebugEnabled = isDebugEnabled;
 if (typeof existing.log !== 'function') existing.log = log;
 if (typeof existing.warn !== 'function') existing.warn = warn;
 if (typeof existing.error !== 'function') existing.error = error;
+if (typeof existing.createScopedLogger !== 'function') existing.createScopedLogger = createScopedLogger;
+if (typeof window.TDW.Logger.createScopedLogger !== 'function') {
+  window.TDW.Logger.createScopedLogger = createScopedLogger;
+}
+
+// Keep scoped shorthand active in this module without side effects.
+void dlog;
+void dwarn;
+void derror;
