@@ -22,10 +22,9 @@ function tdw_atlas_asset_ver($abs_path, $fallback = '0.2.0') {
   return file_exists($abs_path) ? (string) filemtime($abs_path) : $fallback;
 }
 
-require_once plugin_dir_path(__FILE__) . 'includes/atlas-runtime-config.php';
-require_once plugin_dir_path(__FILE__) . 'includes/atlas-db.php';
-require_once plugin_dir_path(__FILE__) . 'includes/atlas-rest.php';
-require_once plugin_dir_path(__FILE__) . 'includes/atlas-cli.php';
+require_once plugin_dir_path(__FILE__) . 'includes/runtime/index.php';
+require_once plugin_dir_path(__FILE__) . 'includes/db/index.php';
+require_once plugin_dir_path(__FILE__) . 'includes/rest/index.php';
 
 register_activation_hook(__FILE__, 'tdw_atlas_activate');
 add_action('init', 'tdw_atlas_maybe_upgrade');

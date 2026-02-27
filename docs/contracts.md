@@ -168,12 +168,35 @@ Rules:
 
 ### PHP implementation ownership
 - `tdw-atlas-engine.php`: plugin bootstrap, constants, hooks, enqueue, shortcode.
-- `includes/atlas-runtime-config.php`: runtime config assembly (DB effective config + strict validation).
-- `includes/atlas-db.php`: DB table/schema, seeding, activation/upgrade lifecycle.
-- `includes/atlas-rest.php`: route registration for config + preview endpoints.
-- `includes/atlas-cli.php`: optional WP-CLI command for manual db-reset/reseed.
+- `includes/runtime/normalize.php`: shared runtime normalizers + seed-default loader.
+- `includes/runtime/payload.php`: runtime config assembler (DB effective config + strict validation).
+- `includes/db/tables.php`: table-name resolvers + seed log helper.
+- `includes/db/helpers.php`: DB seed normalization + geojson/dataset helpers.
+- `includes/db/seed.php`: reset/reseed orchestration.
+- `includes/db/schema.php`: schema install/upgrade + activation/upgrade lifecycle.
+- `includes/db/cli.php`: optional WP-CLI command for manual `db_reset`.
+- `includes/rest/helpers.php`: REST helper utilities.
+- `includes/rest/preview.php`: preview payload resolver.
+- `includes/rest/handlers.php`: config/preview request handlers.
+- `includes/rest/routes.php`: route registration for config + preview endpoints.
 
 ---
+
+## Contract 4.1 — Admin GUI Transactional Writes (Follow-up #14)
+
+### Current state (`#37`)
+
+1. Dev seed/reset flow intentionally runs without DB transaction wrappers.
+2. Seed policy remains destructive reset + reseed on version drift.
+
+### Required for Admin GUI (`#14`)
+
+1. Multi-step CRUD writes must run in a DB transaction:
+   - `START TRANSACTION`
+   - apply all dependent writes
+   - `COMMIT` only on full success
+   - `ROLLBACK` on any failure
+2. API must fail-fast on write errors and never leave partial persisted state.
 
 
 ## Contract 5 — Logging & Debugging

@@ -5,10 +5,10 @@
   "description": "Local non-UI test tooling for TDW Atlas Engine.",
   "scripts": {
     "test:setup": "npx playwright install chromium",
-    "test:static": "bash scripts/test/static-checks.sh",
-    "test:http": "bash scripts/test/http-smoke.sh",
-    "test:browser": "node scripts/test/browser-console-smoke.mjs",
-    "test:non-ui": "bash scripts/test/run-non-ui-tests.sh"
+    "test:static": "bash tests/static-checks.sh",
+    "test:http": "bash tests/http-smoke.sh",
+    "test:browser": "node tests/browser-console-smoke.mjs",
+    "test:non-ui": "bash tests/run-non-ui-tests.sh"
   },
   "devDependencies": {
     "playwright": "^1.58.2"

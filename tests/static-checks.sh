@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 echo "[static] JS syntax checks..."
@@ -18,9 +18,19 @@ node --check assets/shared/tdw-logger.js
 
 echo "[static] PHP syntax checks..."
 php -l tdw-atlas-engine.php
-php -l includes/atlas-db.php
-php -l includes/atlas-runtime-config.php
-php -l includes/atlas-rest.php
-php -l includes/atlas-cli.php
+php -l includes/runtime/normalize.php
+php -l includes/runtime/payload.php
+php -l includes/runtime/index.php
+php -l includes/db/tables.php
+php -l includes/db/helpers.php
+php -l includes/db/seed.php
+php -l includes/db/schema.php
+php -l includes/db/cli.php
+php -l includes/db/index.php
+php -l includes/rest/helpers.php
+php -l includes/rest/preview.php
+php -l includes/rest/handlers.php
+php -l includes/rest/routes.php
+php -l includes/rest/index.php
 
 echo "[static] OK"

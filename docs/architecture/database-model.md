@@ -128,7 +128,17 @@ PK: `(dataset_key, map_key, country_code, part_id)`
 2. Init-if-missing: reseed when required seed data is absent.
 3. Version change: deterministic reset + reseed (dev policy).
 4. Corrupt runtime rows: fail-fast (REST returns error), no silent auto-repair.
-5. Manual debug reset command (when WP-CLI is available): `wp tdw-atlas db-reset`.
+5. Manual debug reset command (when WP-CLI is available): `wp tdw-atlas db_reset`.
+6. Current dev seed flow intentionally does not use DB transaction wrappers.
+
+## Admin GUI Follow-up (`#14`)
+
+1. CRUD operations must use DB transactions:
+   - `START TRANSACTION`
+   - `COMMIT` on full success
+   - `ROLLBACK` on any error
+2. Applies to map CRUD, grouping/whitelist/part-rules bulk writes, and UI-driven reset/reseed.
+3. Goal: no half-written DB state from admin write actions.
 
 ## Seed Sources
 

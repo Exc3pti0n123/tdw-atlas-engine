@@ -8,6 +8,23 @@
 4. Provide runtime config endpoint payload (optionally filtered by requested `map_ids`).
 5. Manage DB schema lifecycle and seed defaults.
 
+## PHP Module Layout
+
+1. Runtime modules:
+   - `includes/runtime/normalize.php`
+   - `includes/runtime/payload.php`
+2. DB modules:
+   - `includes/db/tables.php`
+   - `includes/db/helpers.php`
+   - `includes/db/seed.php`
+   - `includes/db/schema.php`
+   - `includes/db/cli.php`
+3. REST modules:
+   - `includes/rest/helpers.php`
+   - `includes/rest/preview.php`
+   - `includes/rest/handlers.php`
+   - `includes/rest/routes.php`
+
 ## JS Responsibilities
 
 1. Load runtime config and orchestrate startup.

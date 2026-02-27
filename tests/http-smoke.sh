@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE_URL="${TDW_ATLAS_BASE_URL:-https://thedesertwhale.local}"
 PAGE_PATH="${TDW_ATLAS_PAGE_PATH:-/laenderinfo-startseite/}"
 MAP_ID="${TDW_ATLAS_MAP_ID:-world}"

@@ -41,6 +41,8 @@ npm run test:setup
 
 `test:setup` installs Chromium for Playwright.
 
+Test runners live in `/tests`.
+
 ## Run commands
 
 ```bash

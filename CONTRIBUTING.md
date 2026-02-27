@@ -56,9 +56,20 @@ PHP:
 
 ```bash
 php -l tdw-atlas-engine.php
-php -l includes/atlas-db.php
-php -l includes/atlas-runtime-config.php
-php -l includes/atlas-rest.php
+php -l includes/runtime/normalize.php
+php -l includes/runtime/payload.php
+php -l includes/runtime/index.php
+php -l includes/db/tables.php
+php -l includes/db/helpers.php
+php -l includes/db/seed.php
+php -l includes/db/schema.php
+php -l includes/db/cli.php
+php -l includes/db/index.php
+php -l includes/rest/helpers.php
+php -l includes/rest/preview.php
+php -l includes/rest/handlers.php
+php -l includes/rest/routes.php
+php -l includes/rest/index.php
 ```
 
 JS:

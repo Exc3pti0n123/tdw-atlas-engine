@@ -15,7 +15,7 @@ class TDW_Atlas_CLI_Command {
    *
    * ## EXAMPLES
    *
-   *     wp tdw-atlas db-reset
+   *     wp tdw-atlas db_reset
    */
   public function db_reset() {
     tdw_atlas_db_install_or_upgrade();

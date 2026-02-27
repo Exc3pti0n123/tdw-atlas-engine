@@ -108,6 +108,18 @@ ATTENTION: intentional hard-stop for diagnosability; runtime could continue.
 2. Architecture-impacting decisions require ADR (or explicit "No ADR required" note).
 3. Non-trivial merges require a context capsule.
 4. Use small, testable increments; avoid oversized commits.
+5. Commit taxonomy is mandatory:
+- `wip(snapshot): ...` for safe intermediate checkpoints before larger refactors.
+- `release(vX.Y.Z-alphaN|betaN|rcN): ...` as milestone completion markers.
+6. Release-marker commits must always include:
+- implemented scope summary
+- tested scope summary
+- intentionally untested/open items
+7. Solo mode policy (single coder) can use `main` directly only with strict checkpoint discipline:
+- checkpoint commit before every major restructure
+- release marker commit when a milestone is considered "finished"
+8. Multi-contributor policy:
+- switch to issue branches (`feat/*`, `fix/*`, `refactor/*`, `docs/*`) and merge into `main` only after review/testing.
 
 ## 9. Definition of Done
 
