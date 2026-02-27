@@ -9,7 +9,7 @@ flowchart TD
   B --> REST
   B --> JS["Atlas JS Runtime"]
   JS --> ADP["Adapter Factory"]
-  ADP --> LADP["Leaflet Adapter Module"]
+  ADP --> LADP["Leaflet Adapter Module (assets/adapter/leaflet)"]
   LADP --> LV["Leaflet ESM Vendor"]
   JS --> GEO["GeoJSON Files"]
 ```

@@ -48,11 +48,6 @@ If you change a contract, update this file and bump the plugin version.
 - `data-map-id` (string): must match the shortcode `id`
 - `data-config-url` (absolute URL): URL to effective runtime config endpoint
 
-### Optional attributes (future)
-- `data-view` (string): view preset id (example: `world`)
-- `data-adapter` (string): adapter name override (default: `leaflet`)
-- `data-debug` ("1"/"0"): per-instance debug override
-
 ### Notes
 - The *outer* WP Group (your layout wrapper) should only contain design classes; it should not be used as the Atlas anchor.
 
@@ -84,38 +79,99 @@ Notes:
 ## Contract 4 — Config Source (JSON bootstrap + DB-backed runtime)
 
 ### Bootstrap location
-- Plugin root: `tdw-atlas-engine/atlas.config.json`
+- Plugin root: `tdw-atlas-engine/atlas.seed.json`
 
 ### Minimal schema (MVP)
 ```json
 {
-  "meta": { "engine": "tdw-atlas-engine", "version": "0.1.4" },
+  "meta": { "engine": "tdw-atlas-engine", "version": "0.2.0" },
   "debug": true,
   "vendor": {
     "leafletJs": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet-src.js",
     "leafletCss": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet.css"
   },
   "maps": {
-    "world": { "adapter": "leaflet", "geojson": "data/ne_50m_admin_0_countries_lakes.json", "view": "world" }
+    "world": {
+      "adapter": "leaflet",
+      "datasetKey": "world-v1",
+      "geojson": "data/ne_50m_admin_0_countries_lakes.json",
+      "groupingTemplate": "data/world-regions.v1.json",
+      "grouping": { "enabled": true, "mode": "set", "setKey": "world-default-v1" },
+      "whitelist": { "enabled": true, "defaultIncluded": false },
+      "preprocess": { "enabled": true },
+      "regionLayer": { "enabled": true },
+      "focus": {
+        "world": { "padding": [28, 28] },
+        "region": { "padding": [24, 24] },
+        "country": { "padding": [20, 20] }
+      },
+      "ui": {
+        "preview": {
+          "showRegionPreview": true,
+          "showCountryPreview": true,
+          "desktopSide": "right",
+          "switchToBottomMaxWHRatio": 0.85
+        }
+      },
+      "view": "world"
+    }
   },
   "views": {
-    "world": { "bounds": [[-60, -180], [85, 180]] }
+    "world": { "bounds": [[-56, -130], [83, 130]] }
   }
 }
 ```
 
 ### Rules
 - `debug` is the single authoritative source for whether debug should be enabled.
-- Runtime config is served via `/wp-json/tdw-atlas/v1/config` (effective config from DB with JSON fallback).
+- Runtime config is served via `/wp-json/tdw-atlas/v1/config` (effective config from DB).
+- Runtime may pass optional query param `map_ids` (comma-separated map keys) to receive only required page-local maps.
 - `maps.{id}.adapter` is required and selects the concrete adapter module.
 - `maps.{id}.geojson` is typically a relative path inside the plugin; Boot resolves it relative to `meta.baseUrl` (fallback: `data-config-url`).
+- `maps.{id}.datasetKey` is required and binds runtime map data to DB dataset metadata.
+- `maps.{id}.grouping` is required and controls grouping mode (`set|geojson|off`).
+- `maps.{id}.whitelist` is required and controls include/exclude policy independently of grouping.
+- `maps.{id}.preprocess` is required and contains geometry preprocessing policy.
+- `maps.{id}.preprocess.enabled` is the master switch for the runtime pipeline:
+  - `true/1`: pipeline runs (whitelist, grouping, part-rules, geometry preprocessing).
+  - `false/0`: pipeline runs in passthrough mode and pipeline-managed settings (`whitelist`, `grouping`, `part-rules`, geometry tasks) are ignored for that map instance.
+- `groupingTemplate` is seed-only metadata; Boot must not fetch this file at runtime.
+- `maps.{id}.regionLayer.enabled` is optional, default `true`; runtime pipeline uses it to enable/disable grouped region runtime layer preparation.
+- `maps.{id}.focus` is optional and controls map focus paddings per interaction stage:
+  - `focus.world.padding` for initial world fit and return-to-world fit.
+  - `focus.region.padding` for region-level fly/fit interactions.
+  - `focus.country.padding` for country-level fly/fit interactions.
+  - `focus.region.excludeCountriesByGroup` (optional) can exclude specific countries from region focus bound calculation, e.g. `{"europe": ["GL", "SJ"]}`.
+- `maps.{id}.ui.preview` controls adapter-agnostic preview behavior:
+  - `showRegionPreview` (boolean)
+  - `showCountryPreview` (boolean)
+  - `desktopSide` (`left|right`)
+  - `switchToBottomMaxWHRatio` (number, `W/H < ratio` => bottom placement)
 - `views.{viewId}.bounds` is optional but recommended for predictable fit.
+- On plugin version change, DB settings/maps are reseeded from `atlas.seed.json` (deterministic dev reset policy).
+- DB freeze baseline and ownership split are defined in `docs/architecture/database-model.md`.
+
+### Country Grouping Seed Template Contract (`groupingTemplate`)
+```json
+{
+  "meta": { "id": "world-regions.v1", "version": "1.2.0" },
+  "set": { "datasetKey": "world-v1", "setKey": "world-default-v1", "sourceType": "system" },
+  "members": [{ "countryCode": "DE", "regionKey": "europe" }]
+}
+```
+
+Rules:
+- `members` are canonical for template import/export.
+- Runtime does not fetch this file directly; template is seed source only.
+- Country codes must be ISO-like 2-letter uppercase values.
+- In runtime/docs use the term `country grouping` consistently.
 
 ### PHP implementation ownership
 - `tdw-atlas-engine.php`: plugin bootstrap, constants, hooks, enqueue, shortcode.
-- `includes/atlas-runtime-config.php`: runtime config assembly (JSON defaults + DB effective config).
+- `includes/atlas-runtime-config.php`: runtime config assembly (DB effective config + strict validation).
 - `includes/atlas-db.php`: DB table/schema, seeding, activation/upgrade lifecycle.
-- `includes/atlas-rest.php`: route registration for config endpoint.
+- `includes/atlas-rest.php`: route registration for config + preview endpoints.
+- `includes/atlas-cli.php`: optional WP-CLI command for manual db-reset/reseed.
 
 ---
 
@@ -247,6 +303,7 @@ All public plugin JS attaches under:
 
 ### Behavior
 - Factory dynamically imports concrete adapter modules by key.
+- Current Leaflet module path is `assets/adapter/leaflet/atlas-leaflet.js`.
 - Unknown adapter key is a hard per-instance failure.
 - Concrete adapter module must export `createAdapter()`.
 
@@ -263,14 +320,15 @@ All public plugin JS attaches under:
 ### Rules
 - Core is a **factory**, not a singleton.
 - Core does **not** scan the DOM.
-- Core does **not** fetch but forward GeoJSON.
+- Core does **not** fetch data.
+- Core forwards normalized runtime payload to adapter (`mapData`, `mapMeta`, `adapterConfig`), where `mapData` is the prepared runtime bundle from Boot pipeline.
 
 ---
 
 ## Contract 9 — Core Instance API
 
 Each Core instance exposes:
-- `init({ adapter, el, geojson, config })`
+- `init({ adapter, el, mapData, mapMeta, adapterConfig })`
 - `destroy()`
 
 Notes:
@@ -286,13 +344,14 @@ Notes:
 ## Contract 10 — Adapter Contract (Leaflet + future adapters)
 
 Adapters must implement:
-- `init({ el, config, geojson, core })`  *(may be async)*
+- `init({ el, mapData, mapMeta, adapterConfig, core })`  *(may be async)*
 - `onResize(activeRegionId)`
 - `destroy()`
 
 ### Rendering responsibility
 - Adapter creates all internal DOM for the map (Leaflet container, panes, tooltips).
 - Adapter is responsible for fitting bounds and applying view presets.
+- Adapter consumes prepared runtime bundle (`mapData`) and must not perform raw GeoJSON preprocessing.
 
 ---
 
@@ -310,36 +369,28 @@ Adapters must implement:
   - Resolve adapter key from `maps[mapId].adapter`.
   - Create adapter instance via `window.TDW.Atlas.Adapter.create(...)`.
   - Resolve map entry (`maps[mapId]`) and view preset (`views[viewId]`).
-  - Fetch GeoJSON (or pass URL to adapter if configured later).
-  - Create a Core instance and call `core.init(...)` with adapter + config + el.
+  - Fetch GeoJSON from `maps[mapId].geojson`.
+  - Build `mapMeta` from runtime config (`grouping`, `whitelist`, `preprocess`, `regionLayer`).
+  - Build prepared runtime bundle via `assets/js/runtime/atlas-map-pipeline.js` (`prepareRuntimeBundle({ mapData, mapMeta, mapConfig })`).
+  - Build adapter runtime config (`vendor`, map config, optional view preset), including `maps.{id}.ui.preview`.
+  - Create a Core instance and call `core.init(...)` with adapter + `mapData` + `mapMeta` + `adapterConfig`.
 
 ### Non-responsibilities
 - Boot does not contain adapter logic.
 - Boot does not register adapters.
 
----
+### Preview REST Endpoint
+- Route: `GET /wp-json/tdw-atlas/v1/preview`
+- Required query params:
+  - `map_id`
+  - `scope` (`region|country`)
+  - `key`
+- Missing or invalid params must return HTTP 400.
+- Response shape (placeholder):
+  - `mapId`, `scope`, `key`, `title`, `teaser`, `readMoreUrl`, `placeholder`
+- Preview request failures must not block map rendering.
 
-
-## Contract 12 — Archived Debug Script (non-runtime)
-
-### Location
-- `assets/js/atlas-debug.js.old`
-
-### Purpose
-- Historical reference only.
-- Not part of active runtime/module graph.
-
-### Load Behavior
-- Not enqueued in current architecture.
-
-### Rule
-- Keep as archive or delete later; do not treat it as a current contract source.
-
----
-
-
-
-## Contract 13 — Vendor Loading (Leaflet ESM)
+## Contract 12 — Vendor Loading (Leaflet ESM)
 
 ### Leaflet JS
 - Must be loaded via `import()` from `config.vendor.leafletJs` (ESM build).
@@ -353,7 +404,7 @@ Adapters must implement:
 
 ---
 
-## Contract 14 — Design Tokens
+## Contract 13 — Design Tokens
 
 Atlas CSS must rely on tokens provided by `tdw-site-core`:
 - `--tdw-bg`, `--tdw-text`, `--tdw-muted`, `--tdw-water`, `--tdw-border`, etc.
@@ -363,7 +414,7 @@ Atlas CSS must rely on tokens provided by `tdw-site-core`:
 
 ---
 
-## Contract 15 — Data Attribution (future)
+## Contract 14 — Data Attribution (future)
 
 When we add a visible attribution UI, it must support:
 - Dataset name + source
@@ -373,22 +424,14 @@ When we add a visible attribution UI, it must support:
 
 ---
 
-## Contract 16 — Atlas Cookie Operations
+## Contract 15 — Atlas Cookie Operations
 
 ### Location
 - `assets/js/helpers/atlas-cookie-ops.js`
 
 ### Public surface
-- `window.TDW.Atlas.CookieOps.getRaw(name)`
-- `window.TDW.Atlas.CookieOps.setRaw(name, value, options?)`
-- `window.TDW.Atlas.CookieOps.remove(name, options?)`
-- `window.TDW.Atlas.CookieOps.getBool(name)`
-- `window.TDW.Atlas.CookieOps.setBool(name, enabled, options?)`
-- `window.TDW.Atlas.CookieOps.getJson(name)`
-- `window.TDW.Atlas.CookieOps.setJson(name, value, options?)`
 - `window.TDW.Atlas.CookieOps.getDebugFlag()`
 - `window.TDW.Atlas.CookieOps.setDebugFlag(enabled, options?)`
-- `window.TDW.Atlas.CookieOps.clearDebugFlag(options?)`
 - `window.TDW.Atlas.CookieOps.initDebugFromCookie()`
 
 ### Rules
@@ -403,24 +446,16 @@ When we add a visible attribution UI, it must support:
 
 - Shared vendor namespace attachments are provided by `assets/shared/tdw-bridge.js`.
 - Current bridge API:
-  - `window.TDW.bridge.define(name, loader, options?)`
   - `window.TDW.bridge.get(name)` (async)
-  - `window.TDW.bridge.getSync(name)` (sync, resolved values only)
+  - `window.TDW.bridge.getSync(name)` (sync)
 - Current contract exposed by bridge:
   - `window.TDW.vendor.Cookies` (eager)
 - Atlas uses the bridge, but bridge internals are shared-layer concerns.
-
-### Bridge Loading Modes (Atlas usage policy)
-
-- `always-load` (eager): required for small, foundational libs used in early startup.
-  - Atlas example: `Cookies`.
-- `load-on-call` (lazy): use for optional/heavy libs via `bridge.get(name)`.
-- `conditional` eager: allowed for non-critical diagnostics/features with explicit condition.
 - Atlas logger is **not** loaded through bridge; it remains an explicit shared module dependency.
 
 ---
 
-## Contract 17 — Script Module Load Order
+## Contract 16 — Script Module Load Order
 
 Required dependency graph for predictable logging and runtime:
 
@@ -446,7 +481,7 @@ Rules:
 
 ---
 
-## Contract 18 — AI Context Pack and Documentation Duty
+## Contract 17 — AI Context Pack and Documentation Duty
 
 ### Mandatory AI context pack before planning/coding/docs updates
 
@@ -459,17 +494,24 @@ Rules:
 
 - AI must preserve module structure convention (Contract 3).
 - AI must update matching docs when runtime/contracts/process are affected.
+- AI must run non-UI suite for implementation changes:
+  - `npm run test:non-ui`
+  - details in `docs/process/non-ui-testing.md`
 - AI must declare test status explicitly:
   - `implemented`
   - `partially tested`
   - `done tested`
+
+Testing ownership split:
+- AI/Codex owns non-UI reproducible tests.
+- Human owns interface/visual/UX testing and final UI acceptance.
 
 Reference:
 - `docs/onboarding/machine.md`
 
 ---
 
-## Contract 19 — Merge Context Capsule
+## Contract 18 — Merge Context Capsule
 
 For non-trivial merged PRs, one merge capsule is required:
 
@@ -490,7 +532,7 @@ Template:
 
 ---
 
-## Contract 20 — ADR Requirement (v0.1.4+)
+## Contract 19 — ADR Requirement (v0.1.4+)
 
 From v0.1.4 onward, architecture-affecting changes require:
 

@@ -15,9 +15,49 @@
 
 ## Adapter Instance Responsibilities
 
-1. `init({ el, config, geojson, core })`
+1. `init({ el, mapData, mapMeta, adapterConfig, core })`
 2. `onResize(activeRegionId)`
 3. `destroy()`
+
+## Runtime Pipeline Boundary
+
+1. Boot delegates data preparation to `assets/js/runtime/atlas-map-pipeline.js`.
+2. Pipeline owns multipolygon mini-workflow (`split -> micro cleanup -> task -> setPolygonId`).
+3. Pipeline owns whitelist application, grouping mode resolution (`set|geojson|off`), and runtime assignment on features.
+4. Pipeline emits runtime bundle artifacts (`countryRuntimeMap`, optional `regionRuntimeMap`, grouping metadata, diagnostics).
+5. `mapMeta.preprocess.enabled` is the master switch:
+   - `true`: pipeline runs full preprocessing path.
+   - `false`: pipeline runs passthrough path; grouping/whitelist/part-rules are ignored for this instance.
+
+## Runtime Stage Flow (Leaflet)
+
+1. Start stage: `world` (region-status view).
+2. `world` click on region feature enters `region` stage.
+3. `region`/`country` stages use one hybrid layer:
+   - active region features are country-kind (`tdwHybridKind='country'`)
+   - non-active region features are region-kind (`tdwHybridKind='region'`)
+4. Hybrid click routing is deterministic:
+   - country-kind click => `enterCountryStage(...)`
+   - region-kind click => `enterRegionStage(...)` (immediate region switch)
+5. Sea click is two-step:
+   - `country -> region`
+   - `region -> world`
+6. Stage transitions commit on movement completion (`moveend` + fallback timer), not before.
+
+## Preview Coupling (Leaflet)
+
+1. Preview open/close is called only from stage transition functions.
+2. Stage mapping:
+   - `world`: close preview
+   - `region`: open region preview when enabled
+   - `country`: open country preview when enabled
+3. Preview close button always returns to `world` stage.
+
+## Ownership Rule (Global vs Adapter-Specific)
+
+1. Grouping/whitelist data is global domain data (DB-assembled, adapter-agnostic).
+2. Leaflet consumes prepared runtime bundle artifacts from Boot pipeline.
+3. Geometry preprocessing strategy and part-rules execution are owned by runtime pipeline, not by renderer adapters.
 
 ## Isolation Rule
 

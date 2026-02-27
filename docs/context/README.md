@@ -12,6 +12,8 @@ Context capsules preserve decision and implementation context across contributor
 
 Current baseline example:
 - `merges/2026-02-22-pr-0000-docs-refactor-v0.1.4.md`
+- `merges/2026-02-23-pr-0000-v0-2-0-functional-only.md`
+- `merges/2026-02-25-pr-0000-db-first-runtime-v0-2-0.md`
 - merge template in-context:
   - `merges/TEMPLATE-YYYY-MM-DD-pr-0000-slug.md`
 

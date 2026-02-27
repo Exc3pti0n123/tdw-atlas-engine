@@ -11,7 +11,10 @@
 - `[tdw_atlas id="world"]`
 - `/wp-json/tdw-atlas/v1/config`
 
-3. Run syntax checks from `CONTRIBUTING.md`.
+3. Run non-UI checks:
+- `npm run test:non-ui`
+- details: `../process/non-ui-testing.md`
+4. Run manual interface testing (visual + interaction feel).
 
 ## How to Start a Task
 
@@ -24,6 +27,8 @@
 ## Done Criteria
 
 - test status declared (`implemented`, `partially tested`, `done tested`)
+- non-ui checks passed
+- interface testing completed (human-owned)
 - contracts/architecture updated if needed
 - ADR included when architecture decision changed
 - merge capsule added for non-trivial PR

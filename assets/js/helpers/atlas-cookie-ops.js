@@ -2,21 +2,13 @@
    Module: TDW Atlas Engine — CookieOps Helper
    ------------------------------------------------------------
    Purpose:
-   - Provide atlas-specific cookie read/write helpers on a stable namespace.
-   - Hide js-cookie details from Boot/Core/Adapter modules.
+   - Keep debug-cookie handling centralized for Atlas modules.
+   - Hide js-cookie backend details behind a tiny stable API.
 
    Public surface:
    - window.TDW.Atlas.CookieOps
-     - getRaw(name)
-     - setRaw(name, value, options?)
-     - remove(name, options?)
-     - getBool(name)
-     - setBool(name, enabled, options?)
-     - getJson(name)
-     - setJson(name, value, options?)
      - getDebugFlag()
      - setDebugFlag(enabled, options?)
-     - clearDebugFlag(options?)
      - initDebugFromCookie()
    ============================================================ */
 
@@ -76,12 +68,8 @@ function buildAttributes(options = {}) {
   return attrs;
 }
 
-function normalizeName(name) {
-  return String(name || '').trim();
-}
-
-function getRaw(name) {
-  const key = normalizeName(name);
+function getCookieRaw(name) {
+  const key = String(name || '').trim();
   if (!key) return undefined;
 
   const client = getClient();
@@ -90,8 +78,8 @@ function getRaw(name) {
   return client.get(key);
 }
 
-function setRaw(name, value, options = {}) {
-  const key = normalizeName(name);
+function setCookieRaw(name, value, options = {}) {
+  const key = String(name || '').trim();
   if (!key) return false;
 
   const client = getClient();
@@ -101,19 +89,8 @@ function setRaw(name, value, options = {}) {
   return true;
 }
 
-function remove(name, options = {}) {
-  const key = normalizeName(name);
-  if (!key) return false;
-
-  const client = getClient();
-  if (!client) return false;
-
-  client.remove(key, buildAttributes(options));
-  return true;
-}
-
-function getBool(name) {
-  const raw = getRaw(name);
+function getCookieBool(name) {
+  const raw = getCookieRaw(name);
   if (raw == null) return null;
 
   const norm = String(raw).trim().toLowerCase();
@@ -122,43 +99,13 @@ function getBool(name) {
   return null;
 }
 
-function setBool(name, enabled, options = {}) {
-  return setRaw(name, enabled ? '1' : '0', options);
-}
-
-function getJson(name) {
-  const raw = getRaw(name);
-  if (raw == null || raw === '') return null;
-
-  try {
-    return JSON.parse(raw);
-  } catch (err) {
-    dwarn('Invalid JSON cookie payload.', { name, err });
-    return null;
-  }
-}
-
-function setJson(name, value, options = {}) {
-  try {
-    return setRaw(name, JSON.stringify(value), options);
-  } catch (err) {
-    dwarn('Failed to serialize JSON cookie payload.', { name, err });
-    return false;
-  }
-}
-
 function getDebugFlag() {
-  return getBool(DEBUG_COOKIE_NAME);
+  return getCookieBool(DEBUG_COOKIE_NAME);
 }
 
 function setDebugFlag(enabled, options = {}) {
   const withDefaults = Object.assign({ days: DEFAULT_COOKIE_DAYS }, options);
-  return setBool(DEBUG_COOKIE_NAME, Boolean(enabled), withDefaults);
-}
-
-function clearDebugFlag(options = {}) {
-  const attrs = Object.assign({}, options);
-  return remove(DEBUG_COOKIE_NAME, { attributes: attrs });
+  return setCookieRaw(DEBUG_COOKIE_NAME, enabled ? '1' : '0', withDefaults);
 }
 
 function applyAtlasDebugScopes(enabled) {
@@ -181,16 +128,8 @@ function initDebugFromCookie() {
    3) PUBLIC API
    ============================================================ */
 
-if (typeof existing.getRaw !== 'function') existing.getRaw = getRaw;
-if (typeof existing.setRaw !== 'function') existing.setRaw = setRaw;
-if (typeof existing.remove !== 'function') existing.remove = remove;
-if (typeof existing.getBool !== 'function') existing.getBool = getBool;
-if (typeof existing.setBool !== 'function') existing.setBool = setBool;
-if (typeof existing.getJson !== 'function') existing.getJson = getJson;
-if (typeof existing.setJson !== 'function') existing.setJson = setJson;
 if (typeof existing.getDebugFlag !== 'function') existing.getDebugFlag = getDebugFlag;
 if (typeof existing.setDebugFlag !== 'function') existing.setDebugFlag = setDebugFlag;
-if (typeof existing.clearDebugFlag !== 'function') existing.clearDebugFlag = clearDebugFlag;
 if (typeof existing.initDebugFromCookie !== 'function') existing.initDebugFromCookie = initDebugFromCookie;
 
 /* ============================================================

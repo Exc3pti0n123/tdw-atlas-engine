@@ -14,8 +14,9 @@ Owner:
 
 ## Dynamic Runtime Graph
 
-1. `tdw-atlas-adapter` -> dynamic import of concrete adapter module (`assets/js/adapters/*`).
-2. concrete adapter (leaflet) -> dynamic import of Leaflet ESM from runtime config vendor path.
+1. `tdw-atlas-boot` -> imports runtime pipeline module (`assets/js/runtime/atlas-map-pipeline.js`).
+2. `tdw-atlas-adapter` -> dynamic import of concrete adapter module (`assets/adapter/*`).
+3. concrete adapter (leaflet) -> dynamic import of Leaflet ESM from runtime config vendor path.
 
 See diagram version:
 - `../diagrams/module-dependencies.md`

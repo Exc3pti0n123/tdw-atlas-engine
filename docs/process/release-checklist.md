@@ -12,8 +12,9 @@
 
 1. PHP syntax checks pass.
 2. JS syntax checks pass.
-3. Required smoke tests executed.
-4. Test status clearly reported.
+3. Non-UI suite passes (`npm run test:non-ui`).
+4. Human interface testing executed for UI/UX changes.
+5. Test status clearly reported.
 
 ## Release Notes Input
 

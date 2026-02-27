@@ -10,15 +10,12 @@
 .tdw-atlas {
   position: relative;
   width: 100%;
-  /* Height comes from inline style on the shortcode for MVP (e.g. 70vh). */
   overflow: hidden;
 
-  /* Default height (MVP) – can be overridden via inline style if ever reintroduced */
+  /* Default height for current MVP. */
   min-height: 70vh;
 
-  /* Optional: give it a subtle frame matching the design system */
   background: var(--tdw-card, #ffffff);
-  border: 1px solid var(--tdw-border, rgba(0, 0, 0, 0.15));
 }
 
 /* If Leaflet creates internal panes, ensure they fill the container */
@@ -87,25 +84,25 @@
   line-height: 1.5;
 }
 
-.tdw-atlas-error strong {
+.tdw-error strong {
   font-family: var(--tdw-font-heading, inherit);
   font-weight: 700;
 }
 
-.tdw-atlas-error code {
+.tdw-error code {
   font-family: inherit;
   background: color-mix(in srgb, var(--tdw-text, #1D1A16) 6%, transparent);
   padding: 0.1em 0.35em;
   border-radius: 0.25rem;
 }
 
-.tdw-atlas-error a {
+.tdw-error a {
   color: var(--tdw-water, #3C9FAE);
   text-decoration: underline;
 }
 
-.tdw-atlas-error a:hover,
-.tdw-atlas-error a:focus-visible {
+.tdw-error a:hover,
+.tdw-error a:focus-visible {
   color: var(--tdw-water-hover, #2F8A97);
 }
 
@@ -113,4 +110,94 @@
 .tdw-atlas :is(a, button, [tabindex]):focus-visible {
   outline: 2px solid var(--tdw-water, #3C9FAE);
   outline-offset: 2px;
+}
+
+/* ============================================================
+   Preview Overlay (adapter-agnostic)
+   ============================================================ */
+
+.tdw-atlas-preview {
+  position: absolute;
+  z-index: 500;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "title close"
+    "teaser teaser"
+    "read read";
+  gap: 0.625rem 0.75rem;
+
+  box-sizing: border-box;
+  max-width: calc(100% - 2rem);
+  padding: 0.875rem;
+
+  border: 1px solid color-mix(in srgb, var(--tdw-water, #3C9FAE) 32%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--tdw-card, #ffffff) 92%, var(--tdw-water, #3C9FAE) 8%);
+  color: var(--tdw-text, #1D1A16);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.tdw-atlas-preview.tdw-atlas-preview--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tdw-atlas-preview.tdw-atlas-preview--side-left {
+  top: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  width: min(24rem, 36%);
+}
+
+.tdw-atlas-preview.tdw-atlas-preview--side-right {
+  top: 1rem;
+  bottom: 1rem;
+  right: 1rem;
+  width: min(24rem, 36%);
+}
+
+.tdw-atlas-preview.tdw-atlas-preview--bottom {
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  min-height: 10rem;
+  width: auto;
+}
+
+.tdw-atlas-preview__close {
+  grid-area: close;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tdw-water, #3C9FAE) 18%, transparent);
+  color: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tdw-atlas-preview__title {
+  grid-area: title;
+  margin: 0;
+  font-size: 1rem;
+  font-family: var(--tdw-font-heading, inherit);
+}
+
+.tdw-atlas-preview__teaser {
+  grid-area: teaser;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.tdw-atlas-preview__readmore {
+  grid-area: read;
+  color: var(--tdw-water, #3C9FAE);
+  text-decoration: underline;
 }

@@ -2,29 +2,30 @@
 /**
  * Plugin Name: TDW – Atlas Engine
  * Description: Minimal atlas plugin (Leaflet + TDW Atlas boot) for rendering GeoJSON maps via shortcode.
- * Version: 0.1.4
+ * Version: 0.2.0
  * Author: Justin Errica
  */
 
 if (!defined('ABSPATH')) exit;
 
-const TDW_ATLAS_PLUGIN_VERSION = '0.1.4';
-const TDW_ATLAS_DB_SCHEMA_VERSION = 2;
+const TDW_ATLAS_PLUGIN_VERSION = '0.2.0';
 const TDW_ATLAS_OPTION_SETTINGS = 'tdw_atlas_settings';
 const TDW_ATLAS_OPTION_SYSTEM = 'tdw_atlas_system';
 const TDW_ATLAS_PLUGIN_FILE = __FILE__;
+const TDW_ATLAS_SEED_FILE = 'atlas.seed.json';
 
 /* ============================================================
    Helpers
    ============================================================ */
 
-function tdw_atlas_asset_ver($abs_path, $fallback = '0.1.4') {
+function tdw_atlas_asset_ver($abs_path, $fallback = '0.2.0') {
   return file_exists($abs_path) ? (string) filemtime($abs_path) : $fallback;
 }
 
 require_once plugin_dir_path(__FILE__) . 'includes/atlas-runtime-config.php';
 require_once plugin_dir_path(__FILE__) . 'includes/atlas-db.php';
 require_once plugin_dir_path(__FILE__) . 'includes/atlas-rest.php';
+require_once plugin_dir_path(__FILE__) . 'includes/atlas-cli.php';
 
 register_activation_hook(__FILE__, 'tdw_atlas_activate');
 add_action('init', 'tdw_atlas_maybe_upgrade');
@@ -164,9 +165,6 @@ function tdw_atlas_enqueue_assets() {
     );
   }
 }
-// TODO: For MVP, assets are enqueued only when the shortcode renders.
-// In the future, we need a global loader for global functions / admin UI, etc.
-
 /**
  * Enqueue all frontend assets lazily when the shortcode renders.
  *
@@ -217,7 +215,6 @@ function tdw_atlas_shortcode($atts = array()) {
    * - data-tdw-atlas (presence indicates an atlas container)
    * - data-map-id (string)
    * - data-config-url (absolute URL)
-   * - optional: data-view, data-preset (future)
    */
   $attrs = array(
     'class' => 'tdw-atlas',

@@ -7,7 +7,7 @@
 
    Responsibilities
    - Export ONE public factory: window.TDW.Atlas.Core.create
-   - Validate adapter instance contract at Core boundary.
+   - Validate core init payload at Core boundary.
    - Call adapter lifecycle methods for one container instance.
 
    Non-responsibilities
@@ -54,9 +54,10 @@ function createCore() {
   /**
    * Initialize one map instance.
    *
-   * @param {{adapter: object, el: HTMLElement, config?: object, geojson?: object}} params
+   * @param {{adapter: object, el: HTMLElement, mapData: object, mapMeta: object, adapterConfig: object}} params
+   * mapData is a prepared runtime bundle (built in Boot pipeline), not raw GeoJSON.
    */
-  Core.init = function init({ adapter: adapterInstance, el: element, config, geojson } = {}) {
+  Core.init = function init({ adapter: adapterInstance, el: element, mapData, mapMeta, adapterConfig } = {}) {
     if (!adapterInstance || typeof adapterInstance !== 'object') {
       // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with implicit adapter defaults.
       derror(null, 'Core.init: no valid adapter instance provided.');
@@ -69,13 +70,32 @@ function createCore() {
       return;
     }
 
+    if (!mapData || typeof mapData !== 'object') {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak mapData assumptions.
+      derror(element, 'Core.init: mapData is missing or invalid.');
+      return;
+    }
+
+    if (!mapMeta || typeof mapMeta !== 'object') {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak mapMeta assumptions.
+      derror(element, 'Core.init: mapMeta is missing or invalid.');
+      return;
+    }
+
+    if (!adapterConfig || typeof adapterConfig !== 'object') {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak adapterConfig assumptions.
+      derror(element, 'Core.init: adapterConfig is missing or invalid.');
+      return;
+    }
+
     adapter = adapterInstance;
     el = element;
 
     try {
       const result = adapter.init({
-        config: config || {},
-        geojson: geojson || null,
+        mapData,
+        mapMeta,
+        adapterConfig,
         el,
         core: Core,
       });

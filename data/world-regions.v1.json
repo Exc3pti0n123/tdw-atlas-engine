@@ -1,0 +1,732 @@
+{
+  "meta": {
+    "id": "world-regions.v1",
+    "version": "1.6.3",
+    "description": "Country-to-region whitelist for TDW world map (source: world_regions_sorted_master.svg); Americas split north/south; SJ mapped for Norway part promotion."
+  },
+  "set": {
+    "datasetKey": "world-v1",
+    "setKey": "world-default-v1",
+    "label": "World Default",
+    "sourceType": "system",
+    "isLocked": true
+  },
+  "members": [
+    {
+      "countryCode": "PK",
+      "regionKey": "south-central-asia"
+    },
+    {
+      "countryCode": "IR",
+      "regionKey": "south-central-asia"
+    },
+    {
+      "countryCode": "AF",
+      "regionKey": "south-central-asia"
+    },
+    {
+      "countryCode": "NP",
+      "regionKey": "south-asia"
+    },
+    {
+      "countryCode": "LK",
+      "regionKey": "south-asia"
+    },
+    {
+      "countryCode": "IN",
+      "regionKey": "south-asia"
+    },
+    {
+      "countryCode": "BT",
+      "regionKey": "south-asia"
+    },
+    {
+      "countryCode": "BD",
+      "regionKey": "south-asia"
+    },
+    {
+      "countryCode": "RO",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "UA",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "SK",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "SI",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "SE",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "PL",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "RS",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "PT",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "NO",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "SJ",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "NL",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "MT",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "MK",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "ME",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "MD",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "MC",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "LT",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "LU",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "LV",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "GL",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "GR",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "HR",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "HU",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "IE",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "IM",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "IS",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "IT",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "XK",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "LI",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "FR",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "GB",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "FO",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "FI",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "ES",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "EE",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "DK",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "DE",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "CY",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "CZ",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "CH",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "BY",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "BG",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "BE",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "BA",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "AT",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "AL",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "AD",
+      "regionKey": "europe"
+    },
+    {
+      "countryCode": "TR",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "SY",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "YE",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "SA",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "QA",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "PS",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "OM",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "LB",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "KW",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "JO",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "IQ",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "IL",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "BH",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "AE",
+      "regionKey": "near-east"
+    },
+    {
+      "countryCode": "UZ",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "TM",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "TJ",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "RU",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "MN",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "KZ",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "KG",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "GE",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "AZ",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "AM",
+      "regionKey": "central-asia"
+    },
+    {
+      "countryCode": "ZM",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "ZW",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "ZA",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "UG",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "TZ",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "TN",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "TD",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "TG",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "SZ",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "SO",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "SS",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "SN",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "SL",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "SD",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "RW",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "NG",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "NE",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "NA",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "MZ",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "MW",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "MR",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "ML",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "MG",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "MA",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "LY",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "LS",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "LR",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "KM",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "KE",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "GW",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "GQ",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "GN",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "GM",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "GH",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "GA",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "ET",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "ER",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "EH",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "DZ",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "EG",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "DJ",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "CM",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "CI",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "CD",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "CF",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "CG",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "BF",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "BI",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "BJ",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "BW",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "AO",
+      "regionKey": "africa"
+    },
+    {
+      "countryCode": "VE",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "UY",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "US",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "SV",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "SR",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "PY",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "PR",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "PE",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "PA",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "NI",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "MX",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "HT",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "HN",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "GY",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "GT",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "GF",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "FK",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "DO",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "EC",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "CO",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "CR",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "CU",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "CL",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "CA",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "BZ",
+      "regionKey": "north-america"
+    },
+    {
+      "countryCode": "BO",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "BR",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "AR",
+      "regionKey": "south-america"
+    },
+    {
+      "countryCode": "VN",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "TW",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "TL",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "TH",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "SG",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "PH",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "PG",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "MY",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "MM",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "MO",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "LA",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "KR",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "KP",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "KH",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "JP",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "ID",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "HK",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "CN",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "BN",
+      "regionKey": "sea"
+    },
+    {
+      "countryCode": "NZ",
+      "regionKey": "oceania"
+    },
+    {
+      "countryCode": "AU",
+      "regionKey": "oceania"
+    }
+  ]
+}

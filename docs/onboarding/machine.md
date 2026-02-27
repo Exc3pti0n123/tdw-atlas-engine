@@ -27,6 +27,14 @@ This file defines mandatory behavior for AI contributors.
 - `implemented`
 - `partially tested`
 - `done tested`
+5. Run and report non-UI suite for implementation changes:
+- `npm run test:non-ui`
+- reference: `../process/non-ui-testing.md`
+
+## Testing Ownership
+
+1. AI/Codex owns non-UI reproducible tests (CLI, HTTP, browser-console smoke).
+2. Human owns interface/visual/UX testing and final UI acceptance.
 
 ## Required Escalation in Output
 

@@ -28,11 +28,11 @@ const {
 
 const dlog = (...args) => _log(SCOPE, ...args);
 const dwarn = (...args) => _warn(SCOPE, ...args);
-const derror = (el, message, ...meta) => _error(SCOPE, el || null, message, ...meta);
+const derror = (message, ...meta) => _error(SCOPE, null, message, ...meta);
 
 const REQUIRED_ADAPTER_METHODS = ['init', 'onResize', 'destroy'];
 const ADAPTER_MODULES = {
-  leaflet: './adapters/atlas-leaflet.js',
+  leaflet: '../adapter/leaflet/atlas-leaflet.js',
 };
 
 /* ============================================================
@@ -95,7 +95,7 @@ async function create({ adapterKey, mapId = '', el = null } = {}) {
     throw new Error(`Adapter module "${key}" does not export createAdapter().`);
   }
 
-  const instance = createAdapter({ adapterKey: key, mapId });
+  const instance = createAdapter({ adapterKey: key, mapId, el });
   if (!instance || typeof instance !== 'object') {
     // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak adapter assumptions.
     throw new Error(`Adapter factory "${key}" returned invalid instance.`);
@@ -121,9 +121,6 @@ if (typeof existing.create !== 'function') {
   // Existing function is kept to avoid replacing a live factory during duplicate loads.
   dwarn('Adapter factory already registered; keeping existing function (dual-load suspected).');
 }
-
-existing._requiredMethods = REQUIRED_ADAPTER_METHODS;
-existing._knownAdapters = Object.keys(ADAPTER_MODULES);
 
 /* ============================================================
    4) AUTO-RUN

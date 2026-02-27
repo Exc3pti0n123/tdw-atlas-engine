@@ -44,6 +44,14 @@ Non-trivial functions should include JSDoc.
 
 ## Validation Before PR
 
+One-command non-UI suite (preferred):
+
+```bash
+npm run test:non-ui
+```
+
+Individual commands:
+
 PHP:
 
 ```bash
@@ -57,13 +65,16 @@ JS:
 
 ```bash
 node --check assets/js/atlas-adapter.js
-node --check assets/js/adapters/atlas-leaflet.js
+node --check assets/adapter/leaflet/atlas-leaflet.js
 node --check assets/js/atlas-core.js
 node --check assets/js/atlas-boot.js
 node --check assets/js/helpers/atlas-cookie-ops.js
 node --check assets/shared/tdw-bridge.js
 node --check assets/shared/tdw-logger.js
 ```
+
+Browser/HTTP smoke details:
+- `docs/process/non-ui-testing.md`
 
 ## PR Requirements
 
@@ -78,3 +89,4 @@ node --check assets/shared/tdw-logger.js
 - quick checklists: `docs/process/quick-checklists.md`
 - merge policy: `docs/process/merge-strategy.md`
 - release checklist: `docs/process/release-checklist.md`
+- non-ui testing: `docs/process/non-ui-testing.md`

@@ -8,13 +8,16 @@
    - Wait for DOM ready.
    - Discover Atlas containers.
    - Load runtime config once via data-config-url.
+   - Build renderer-agnostic runtime bundle via pipeline.
    - Build adapter instance via Adapter Factory.
-   - Create Core instance and run core.init({ adapter, el, config, geojson }).
+   - Create Core instance and run core.init({ adapter, el, mapData, mapMeta, adapterConfig }).
 
    Non-responsibilities:
    - No adapter registration.
    - No renderer implementation.
    ============================================================ */
+
+import { prepareRuntimeBundle } from './runtime/atlas-map-pipeline.js';
 
 /* ============================================================
    1) MODULE INIT
@@ -44,6 +47,7 @@ function setAtlasDebug(enabled) {
   _setDebug('ATLAS CORE', value);
   _setDebug('ATLAS ADAPTER', value);
   _setDebug('ATLAS LF-ADAPTER', value);
+  _setDebug('ATLAS MAP-PIPELINE', value);
   _setDebug('ATLAS COOKIE-OPS', value);
 }
 
@@ -78,24 +82,94 @@ function getBootDebugState() {
 }
 
 /**
+ * @param {NodeListOf<HTMLElement>} containers
+ * @returns {string[]}
+ */
+function collectRequestedMapIds(containers) {
+  const ids = new Set();
+  for (const el of containers) {
+    const mapId = String(el?.getAttribute?.('data-map-id') || '').trim();
+    if (!mapId) continue;
+    ids.add(mapId);
+  }
+  return Array.from(ids);
+}
+
+/**
  * @param {string} url
+ * @param {string[]} mapIds
  * @returns {Promise<object|null>}
  */
-async function loadRuntimeConfig(url) {
+async function loadRuntimeConfig(url, mapIds = []) {
   if (!url) return null;
 
+  const requestUrl = (() => {
+    try {
+      const u = new URL(url, window.location.origin);
+      if (Array.isArray(mapIds) && mapIds.length) {
+        u.searchParams.set('map_ids', mapIds.join(','));
+      }
+      return u.href;
+    } catch (_) {
+      return url;
+    }
+  })();
+
   try {
-    const res = await fetch(url, { credentials: 'same-origin' });
+    const res = await fetch(requestUrl, { credentials: 'same-origin' });
     if (!res.ok) {
-      derror(null, `Failed to load runtime config (${res.status} ${res.statusText}).`, { url });
+      derror(null, `Failed to load runtime config (${res.status} ${res.statusText}).`, { url: requestUrl });
       return null;
     }
 
     const json = await res.json();
-    dlog('Loaded runtime config.', { url });
+    dlog('Loaded runtime config.', { url: requestUrl, requestedMaps: mapIds.length });
     return json;
   } catch (err) {
-    derror(null, 'Failed to load runtime config (network/parse error).', { url, err });
+    derror(null, 'Failed to load runtime config (network/parse error).', { url: requestUrl, err });
+    return null;
+  }
+}
+
+/**
+ * @param {string} relPath
+ * @param {string} configBaseUrl
+ * @param {string} configUrl
+ * @returns {string|null}
+ */
+function resolveMapAssetUrl(relPath, configBaseUrl, configUrl) {
+  if (!relPath) return null;
+  try {
+    const base = typeof configBaseUrl === 'string' && configBaseUrl ? configBaseUrl : configUrl;
+    return new URL(relPath, base).href;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * @param {string} label
+ * @param {string} url
+ * @param {HTMLElement|null} el
+ * @returns {Promise<object|null>}
+ */
+async function loadJsonResource(label, url, el) {
+  try {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok) {
+      derror(el, `Failed to load ${label} (${res.status} ${res.statusText}).`, { url });
+      return null;
+    }
+
+    const json = await res.json();
+    if (!json || typeof json !== 'object') {
+      derror(el, `Invalid ${label} payload (expected JSON object).`, { url });
+      return null;
+    }
+
+    return json;
+  } catch (err) {
+    derror(el, `Failed to load ${label} (network/parse error).`, { url, err });
     return null;
   }
 }
@@ -164,26 +238,62 @@ async function bootOne(el, createCore, createAdapter, shared) {
     return;
   }
 
-  let geojsonUrl;
-  try {
-    const configBaseUrl = config?.meta?.baseUrl;
-    const geojsonBase = typeof configBaseUrl === 'string' && configBaseUrl ? configBaseUrl : configUrl;
-    geojsonUrl = new URL(geojsonRel, geojsonBase).href;
-  } catch (_) {
+  const datasetKey = String(mapConfig.datasetKey || '').trim();
+  if (!datasetKey) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with implicit dataset key fallback.
+    derror(el, `Missing datasetKey for map id: ${mapId}.`);
+    return;
+  }
+
+  const configBaseUrl = config?.meta?.baseUrl || '';
+  const geojsonUrl = resolveMapAssetUrl(geojsonRel, configBaseUrl, configUrl);
+  if (!geojsonUrl) {
     derror(el, `Invalid geojson URL for map id: ${mapId}.`);
     return;
   }
 
-  let geojson;
+  const sourceMapData = await loadJsonResource('GeoJSON', geojsonUrl, el);
+  if (!sourceMapData) return;
+
+  const mapMeta = {
+    grouping: mapConfig?.grouping || null,
+    whitelist: mapConfig?.whitelist || null,
+    preprocess: mapConfig?.preprocess || null,
+    regionLayer: mapConfig?.regionLayer || null,
+  };
+
+  const viewKey = String(mapConfig.view || '').trim();
+  const adapterConfig = {
+    mapId,
+    adapter: adapterKey,
+    vendor: config?.vendor || {},
+    map: mapConfig,
+    viewKey,
+    view: viewKey ? (config?.views?.[viewKey] || null) : null,
+    mapOptions: mapConfig?.mapOptions || null,
+    style: mapConfig?.style || null,
+  };
+
+  if (!adapterConfig.view && viewKey) {
+    dwarn('Configured view key not found in runtime config.', { mapId, viewKey });
+  }
+
+  if (!adapterConfig.vendor?.leafletJs) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue until adapter import fails.
+    derror(el, `Missing vendor.leafletJs in runtime config for map id: ${mapId}.`);
+    return;
+  }
+
+  let runtimeBundle;
   try {
-    const res = await fetch(geojsonUrl, { credentials: 'same-origin' });
-    if (!res.ok) {
-      derror(el, `Failed to load GeoJSON (${res.status}).`);
-      return;
-    }
-    geojson = await res.json();
-  } catch (_) {
-    derror(el, 'Failed to load GeoJSON (network/parse error).');
+    runtimeBundle = prepareRuntimeBundle({
+      mapData: sourceMapData,
+      mapMeta,
+      mapConfig,
+    });
+  } catch (err) {
+    const reason = String(err?.message || err || 'Unknown pipeline error');
+    derror(el, `Runtime pipeline failed for map id: ${mapId}. Cause: ${reason}`, { mapId, err });
     return;
   }
 
@@ -204,7 +314,7 @@ async function bootOne(el, createCore, createAdapter, shared) {
   }
 
   dlog('Boot: initializing core', { mapId, adapter: adapterKey });
-  coreInstance.init({ adapter, el, config, geojson });
+  coreInstance.init({ adapter, el, mapData: runtimeBundle, mapMeta, adapterConfig });
 }
 
 /**
@@ -222,7 +332,8 @@ async function preBoot() {
     return { config: null, configUrl: '' };
   }
 
-  const config = await loadRuntimeConfig(configUrl);
+  const requestedMapIds = collectRequestedMapIds(containers);
+  const config = await loadRuntimeConfig(configUrl, requestedMapIds);
 
   if (config && typeof config.debug === 'boolean') {
     const debugWasEnabled = getBootDebugState();

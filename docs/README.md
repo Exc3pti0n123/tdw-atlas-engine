@@ -15,6 +15,7 @@ Use this page as the central navigation hub.
 3. `architecture/config-lifecycle.md`
 4. `architecture/adapter-lifecycle.md`
 5. `architecture/php-runtime-boundary.md`
+6. `architecture/database-model.md`
 
 ## Diagrams
 
@@ -22,6 +23,7 @@ Use this page as the central navigation hub.
 2. `diagrams/module-dependencies.md`
 3. `diagrams/runtime-sequence.md`
 4. `diagrams/config-dataflow.md`
+5. `diagrams/preprocessor-flow.md`
 
 ## Onboarding
 
@@ -33,6 +35,7 @@ Use this page as the central navigation hub.
 1. `process/merge-strategy.md`
 2. `process/release-checklist.md`
 3. `process/quick-checklists.md`
+4. `process/non-ui-testing.md`
 
 ## Decision and Context Tracking
 
@@ -44,3 +47,4 @@ Use this page as the central navigation hub.
 
 1. `templates/module-template.md`
 2. `templates/context-capsule-template.md`
+3. `templates/project-kickoff-template.md`

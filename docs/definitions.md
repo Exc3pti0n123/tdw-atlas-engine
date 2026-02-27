@@ -7,11 +7,20 @@
 - Runtime Config:
   - Effective config payload from `/wp-json/tdw-atlas/v1/config`.
 - Bootstrap Defaults:
-  - Static defaults in `atlas.config.json`, used for DB seeding/fallback.
+  - Static defaults in `atlas.seed.json`, used for DB seeding/fallback.
 - Adapter Key:
   - `maps.{id}.adapter` value selecting concrete renderer adapter module.
 - Adapter Factory:
   - `window.TDW.Atlas.Adapter.create(...)`, resolves and validates adapter instance.
+- Country Grouping:
+  - Runtime payload block under `maps.{id}.grouping`.
+  - Canonical runtime mapping `countryToRegion` is DB-assembled for mode `set`.
+  - Adapter-agnostic domain data (not renderer-specific behavior).
+- Whitelist:
+  - Runtime payload block under `maps.{id}.whitelist`.
+  - Include/exclude policy independent from grouping (`map override > global baseline > default`).
+- Preprocess Profile:
+  - Adapter-specific geometry processing policy (e.g. multipolygon strategy).
 - Core Instance:
   - Instance from `window.TDW.Atlas.Core.create()` for one container.
 - Merge Capsule:

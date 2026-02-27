@@ -29,6 +29,8 @@ WordPress plugin for rendering GeoJSON maps via shortcode with a strict ESM runt
   - `docs/process/merge-strategy.md`
 - Quick pre-flight checklists:
   - `docs/process/quick-checklists.md`
+- Non-UI testing (Codex-owned):
+  - `docs/process/non-ui-testing.md`
 
 ## Runtime Snapshot
 

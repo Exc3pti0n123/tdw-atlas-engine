@@ -12,7 +12,7 @@ This is the top-level architecture document for TDW Atlas Engine.
 2. Browser/JS side:
 - shared modules (`tdw-bridge`, `tdw-logger`)
 - atlas modules (`cookie-ops`, `adapter factory`, `core`, `boot`)
-- concrete renderer adapter modules loaded dynamically (`assets/js/adapters/*`)
+- concrete renderer adapter modules loaded dynamically (`assets/adapter/*`)
 
 ## Runtime Model
 
@@ -20,8 +20,9 @@ This is the top-level architecture document for TDW Atlas Engine.
 2. Boot loads runtime config once and iterates containers.
 3. Boot resolves map entry and adapter key.
 4. Adapter factory imports concrete adapter module and creates instance.
-5. Core initializes with adapter instance per container.
-6. Adapter renders or emits fail-fast error per container.
+5. Boot loads GeoJSON and forwards DB-assembled `mapMeta` payload per container.
+6. Core initializes with adapter instance per container.
+7. Adapter prepares/filters map data and renders or emits fail-fast error per container.
 
 ## Source-of-Truth Policy
 
@@ -41,6 +42,7 @@ This is the top-level architecture document for TDW Atlas Engine.
 - `architecture/config-lifecycle.md`
 - `architecture/adapter-lifecycle.md`
 - `architecture/php-runtime-boundary.md`
+- `architecture/database-model.md`
 
 ## Diagram Set
 
@@ -48,3 +50,4 @@ This is the top-level architecture document for TDW Atlas Engine.
 - `diagrams/module-dependencies.md`
 - `diagrams/runtime-sequence.md`
 - `diagrams/config-dataflow.md`
+- `diagrams/preprocessor-flow.md`

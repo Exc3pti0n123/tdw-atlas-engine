@@ -5,14 +5,14 @@
 1. Register plugin hooks and shortcode.
 2. Enqueue startup-critical JS modules with explicit dependencies.
 3. Render atlas container markup.
-4. Provide runtime config endpoint payload.
+4. Provide runtime config endpoint payload (optionally filtered by requested `map_ids`).
 5. Manage DB schema lifecycle and seed defaults.
 
 ## JS Responsibilities
 
 1. Load runtime config and orchestrate startup.
 2. Resolve adapter and initialize core per container.
-3. Fetch geojson and invoke renderer adapter.
+3. Fetch GeoJSON and pass DB-assembled `mapMeta` payload to renderer adapter.
 4. Render fail-fast errors in container when runtime contracts fail.
 
 ## Boundary Rule
