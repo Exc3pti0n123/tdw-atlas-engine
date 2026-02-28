@@ -11,7 +11,14 @@
    ============================================================ */
 
 import { fetchPreview } from './atlas-preview-content.js';
-import { isPlainObject, normalizeBool } from '../helpers/atlas-shared.js';
+import { createPreviewDom, bindPreviewDomEvents, unbindPreviewDomEvents } from './atlas-preview-dom.js';
+import {
+  DEFAULT_PREVIEW_CONFIG,
+  normalizePreviewConfig,
+  resolvePreviewPlacement,
+  applyPreviewPlacementClasses,
+  computePreviewInsets,
+} from './atlas-preview-placement.js';
 
 /* ============================================================
    1) MODULE INIT
@@ -22,98 +29,13 @@ window.TDW.Atlas = window.TDW.Atlas || {};
 window.TDW.Atlas.UI = window.TDW.Atlas.UI || {};
 
 const SCOPE = 'ATLAS PREVIEW';
-const DEFAULT_SWITCH_RATIO = 0.85;
-const DEFAULT_CONFIG = Object.freeze({
-  mapId: '',
-  showRegionPreview: true,
-  showCountryPreview: true,
-  desktopSide: 'right',
-  switchToBottomMaxWHRatio: DEFAULT_SWITCH_RATIO,
-});
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 /* ============================================================
    2) FUNCTIONS
-   ============================================================ */
-
-/**
- * @param {unknown} candidate
- * @returns {{mapId:string,showRegionPreview:boolean,showCountryPreview:boolean,desktopSide:'left'|'right',switchToBottomMaxWHRatio:number}}
- */
-function normalizeConfig(candidate) {
-  const config = isPlainObject(candidate) ? candidate : {};
-  const sideRaw = String(config.desktopSide || DEFAULT_CONFIG.desktopSide).trim().toLowerCase();
-  const desktopSide = sideRaw === 'left' ? 'left' : 'right';
-  const ratioRaw = Number(config.switchToBottomMaxWHRatio ?? DEFAULT_SWITCH_RATIO);
-  const switchToBottomMaxWHRatio = Number.isFinite(ratioRaw) && ratioRaw > 0 ? ratioRaw : DEFAULT_SWITCH_RATIO;
-
-  return {
-    mapId: String(config.mapId || DEFAULT_CONFIG.mapId).trim(),
-    showRegionPreview: normalizeBool(config.showRegionPreview, DEFAULT_CONFIG.showRegionPreview),
-    showCountryPreview: normalizeBool(config.showCountryPreview, DEFAULT_CONFIG.showCountryPreview),
-    desktopSide,
-    switchToBottomMaxWHRatio,
-  };
-}
-
-/**
- * @param {{switchToBottomMaxWHRatio:number,desktopSide:'left'|'right'}} config
- * @returns {{mode:'side'|'bottom',side:'left'|'right',ratio:number}}
- */
-function resolvePlacement(config) {
-  const width = Number(window.innerWidth || document.documentElement?.clientWidth || 1);
-  const height = Number(window.innerHeight || document.documentElement?.clientHeight || 1);
-  const ratio = height > 0 ? (width / height) : 1;
-  const mode = ratio < config.switchToBottomMaxWHRatio ? 'bottom' : 'side';
-  return {
-    mode,
-    side: config.desktopSide,
-    ratio,
-  };
-}
-
-/**
- * @param {HTMLElement} rootEl
- * @returns {{panel:HTMLElement,titleEl:HTMLElement,teaserEl:HTMLElement,readMoreEl:HTMLAnchorElement,closeBtn:HTMLButtonElement}}
- */
-function createDom(rootEl) {
-  const panel = document.createElement('aside');
-  panel.className = 'tdw-atlas-preview';
-  panel.setAttribute('aria-live', 'polite');
-
-  const closeBtn = document.createElement('button');
-  closeBtn.type = 'button';
-  closeBtn.className = 'tdw-atlas-preview__close';
-  closeBtn.setAttribute('aria-label', 'Close preview');
-  closeBtn.textContent = '×';
-
-  const titleEl = document.createElement('h3');
-  titleEl.className = 'tdw-atlas-preview__title';
-
-  const teaserEl = document.createElement('p');
-  teaserEl.className = 'tdw-atlas-preview__teaser';
-
-  const readMoreEl = document.createElement('a');
-  readMoreEl.className = 'tdw-atlas-preview__readmore';
-  readMoreEl.textContent = 'Read more';
-  readMoreEl.href = '#';
-
-  panel.appendChild(closeBtn);
-  panel.appendChild(titleEl);
-  panel.appendChild(teaserEl);
-  panel.appendChild(readMoreEl);
-  rootEl.appendChild(panel);
-
-  return { panel, titleEl, teaserEl, readMoreEl, closeBtn };
-}
-
-/* ============================================================
-   3) PUBLIC API
    ============================================================ */
 
 /**
@@ -126,7 +48,7 @@ export function create({ rootEl, config = {}, onClose = null } = {}) {
     throw new Error('Preview create() requires rootEl HTMLElement.');
   }
 
-  const normalized = normalizeConfig(config);
+  const normalized = normalizePreviewConfig(config);
   const state = {
     isOpen: false,
     scope: '',
@@ -136,27 +58,23 @@ export function create({ rootEl, config = {}, onClose = null } = {}) {
     requestId: 0,
   };
 
-  const dom = createDom(rootEl);
+  const dom = createPreviewDom(rootEl);
 
   /**
-   * @returns {void}
+   * @returns {{mode:'side'|'bottom',side:'left'|'right',ratio:number}}
    */
   function applyPlacement() {
-    const placement = resolvePlacement(normalized);
+    const placement = resolvePreviewPlacement(normalized);
     state.mode = placement.mode;
     state.side = placement.side;
-
-    dom.panel.classList.toggle('tdw-atlas-preview--open', state.isOpen);
-    dom.panel.classList.toggle('tdw-atlas-preview--bottom', placement.mode === 'bottom');
-    dom.panel.classList.toggle('tdw-atlas-preview--side-left', placement.mode === 'side' && placement.side === 'left');
-    dom.panel.classList.toggle('tdw-atlas-preview--side-right', placement.mode === 'side' && placement.side === 'right');
+    applyPreviewPlacementClasses(dom.panel, state.isOpen, placement);
+    return placement;
   }
 
   /**
    * @param {string} title
    * @param {string} teaser
    * @param {string} readMoreUrl
-   * @returns {void}
    */
   function renderContent(title, teaser, readMoreUrl) {
     dom.titleEl.textContent = title;
@@ -171,39 +89,12 @@ export function create({ rootEl, config = {}, onClose = null } = {}) {
    * @returns {{top:number,right:number,bottom:number,left:number}}
    */
   function getInsets() {
-    if (!state.isOpen) {
-      return { top: 0, right: 0, bottom: 0, left: 0 };
-    }
-
-    const rect = dom.panel.getBoundingClientRect();
-    const width = Math.max(0, Math.ceil(Number(rect.width || 0)));
-    const height = Math.max(0, Math.ceil(Number(rect.height || 0)));
-    const gap = 12;
-
-    if (state.mode === 'bottom') {
-      return {
-        top: 0,
-        right: 0,
-        bottom: height > 0 ? height + gap : 0,
-        left: 0,
-      };
-    }
-
-    if (state.side === 'left') {
-      return {
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: width > 0 ? width + gap : 0,
-      };
-    }
-
-    return {
-      top: 0,
-      right: width > 0 ? width + gap : 0,
-      bottom: 0,
-      left: 0,
+    const placement = {
+      mode: state.mode === 'bottom' ? 'bottom' : 'side',
+      side: state.side === 'left' ? 'left' : 'right',
     };
+
+    return computePreviewInsets(dom.panel, state.isOpen, placement);
   }
 
   /**
@@ -262,7 +153,6 @@ export function create({ rootEl, config = {}, onClose = null } = {}) {
 
   /**
    * @param {{reason?:string, notify?:boolean}} params
-   * @returns {void}
    */
   function close({ reason = 'programmatic', notify = true } = {}) {
     if (!state.isOpen && reason !== 'destroy') return;
@@ -298,26 +188,6 @@ export function create({ rootEl, config = {}, onClose = null } = {}) {
   /**
    * @returns {void}
    */
-  function destroy() {
-    close({ reason: 'destroy', notify: false });
-    try {
-      dom.closeBtn.removeEventListener('click', onCloseClick);
-      dom.readMoreEl.removeEventListener('click', onReadMoreClick);
-      dom.panel.removeEventListener('pointerdown', stopPanelPropagation);
-      dom.panel.removeEventListener('click', stopPanelPropagation);
-      dom.panel.removeEventListener('dblclick', stopPanelPropagation);
-      dom.panel.removeEventListener('contextmenu', stopPanelPropagation);
-      dom.panel.removeEventListener('touchstart', stopPanelPropagation);
-      window.removeEventListener('resize', onWindowResize);
-      dom.panel.remove();
-    } catch (err) {
-      derror('destroy() failed unexpectedly.', { err });
-    }
-  }
-
-  /**
-   * @returns {void}
-   */
   function onCloseClick(event) {
     if (event && typeof event.preventDefault === 'function') event.preventDefault();
     if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
@@ -347,13 +217,30 @@ export function create({ rootEl, config = {}, onClose = null } = {}) {
     reposition();
   }
 
-  dom.closeBtn.addEventListener('click', onCloseClick);
-  dom.readMoreEl.addEventListener('click', onReadMoreClick);
-  dom.panel.addEventListener('pointerdown', stopPanelPropagation);
-  dom.panel.addEventListener('click', stopPanelPropagation);
-  dom.panel.addEventListener('dblclick', stopPanelPropagation);
-  dom.panel.addEventListener('contextmenu', stopPanelPropagation);
-  dom.panel.addEventListener('touchstart', stopPanelPropagation);
+  /**
+   * @returns {void}
+   */
+  function destroy() {
+    close({ reason: 'destroy', notify: false });
+
+    try {
+      unbindPreviewDomEvents(dom, {
+        onCloseClick,
+        onReadMoreClick,
+        stopPanelPropagation,
+      });
+      window.removeEventListener('resize', onWindowResize);
+      dom.panel.remove();
+    } catch (err) {
+      derror('destroy() failed unexpectedly.', { err });
+    }
+  }
+
+  bindPreviewDomEvents(dom, {
+    onCloseClick,
+    onReadMoreClick,
+    stopPanelPropagation,
+  });
   window.addEventListener('resize', onWindowResize);
   applyPlacement();
 
@@ -365,6 +252,12 @@ export function create({ rootEl, config = {}, onClose = null } = {}) {
     destroy,
   };
 }
+
+/* ============================================================
+   3) PUBLIC API
+   ============================================================ */
+
+// Exported preview API is declared inline above.
 
 /* ============================================================
    4) AUTO-RUN

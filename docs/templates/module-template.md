@@ -32,7 +32,9 @@ window.TDW.Atlas = window.TDW.Atlas || {};
 window.TDW.Atlas.<ModuleKey> = window.TDW.Atlas.<ModuleKey> || {};
 
 const SCOPE = '<MODULE SCOPE>';
-const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 /* ============================================================
    2) FUNCTIONS
@@ -68,8 +70,12 @@ if (typeof api.exampleFunction !== 'function') api.exampleFunction = exampleFunc
 - Keep `MODULE INIT` minimal: no network, no DOM scanning, no heavy logic.
 - Put all behavior in `FUNCTIONS`; only expose what is needed in `PUBLIC API`.
 - `AUTO-RUN` is optional and should be used only for required startup wiring.
-- Logger boilerplate is mandatory in this exact form:
-  - `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+- JSDoc is mandatory for every function:
+  - top-level function declarations
+  - internal helper functions
+  - public API methods
+- Logger boilerplate is mandatory in this compact form:
+  - `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 - Direct `window.TDW._logger.log/warn/error` usage is reserved for:
   - `assets/shared/tdw-logger.js`
 - If module-level `dlog`/`dwarn` calls exist, ensure PHP module dependencies guarantee logger availability.

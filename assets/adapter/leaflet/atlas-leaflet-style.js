@@ -22,11 +22,9 @@ import { isPlainObject } from '../../js/helpers/atlas-shared.js';
 
 const SCOPE = 'ATLAS LF-STYLE';
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 export const INTERACTION_STYLE = Object.freeze({
   world: {

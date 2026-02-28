@@ -27,11 +27,9 @@ window.TDW.Atlas.Core = window.TDW.Atlas.Core || {};
 
 const SCOPE = 'ATLAS CORE';
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 /* ============================================================
    2) FUNCTIONS

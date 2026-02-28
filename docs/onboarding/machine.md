@@ -25,18 +25,22 @@ This file defines mandatory behavior for AI contributors.
 - `PUBLIC API`
 - `AUTO-RUN`
 3. Use logger boilerplate in every Atlas module:
-- `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
-4. Keep docs synchronized with relevant changes:
+- `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
+4. Add JSDoc to every function:
+- top-level functions
+- module-internal helpers
+- public API methods (`init`, `destroy`, ...)
+5. Keep docs synchronized with relevant changes:
 - contracts
 - architecture docs
 - ADR
 - version references
 - merge capsule
-5. Declare test status clearly in outputs:
+6. Declare test status clearly in outputs:
 - `implemented`
 - `partially tested`
 - `done tested`
-6. Run and report non-UI suite for implementation changes:
+7. Run and report non-UI suite for implementation changes:
 - `npm run test:non-ui`
 - reference: `../process/non-ui-testing.md`
 

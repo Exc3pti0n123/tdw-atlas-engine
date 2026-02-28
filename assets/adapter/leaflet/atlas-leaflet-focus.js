@@ -19,11 +19,9 @@ import {
 
 const SCOPE = 'ATLAS LF-FOCUS';
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 export const DEFAULT_FOCUS_PADDING = Object.freeze({
   world: [28, 28],

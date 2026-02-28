@@ -11,7 +11,7 @@ Use this page as the fastest pre-flight check.
    - latest merge capsule in `docs/context/merges/`
 2. Confirm changed code follows js file structure (`MODULE INIT`, `FUNCTIONS`, `PUBLIC API`, `AUTO-RUN`).
 3. Confirm logger boilerplate uses:
-   - `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+   - `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 4. Confirm modules were created from templates:
    - `docs/templates/module-template.md`
    - `docs/templates/module-template-custom.md` (if custom sections are used)

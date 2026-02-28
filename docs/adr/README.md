@@ -29,6 +29,7 @@ Use:
 ## Current ADR Index
 
 1. `ADR-0001-docs-governance-v0.1.4.md`
+2. `ADR-0002-runtime-refactor-and-module-governance-v0.2.0-alpha4.md`
 
 ## Note on Docs-Only Changes
 

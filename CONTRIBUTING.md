@@ -43,7 +43,7 @@ Template:
 
 Non-trivial functions should include JSDoc.
 Logger boilerplate is mandatory:
-- `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+- `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 
 ## Validation Before PR
 

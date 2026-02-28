@@ -1,12 +1,12 @@
-# Runtime Pipeline Flow
+# Runtime Preprocessor Flow
 
 This diagram mirrors the current processing chain in:
-`assets/js/runtime/atlas-map-pipeline.js`.
+`assets/js/runtime/atlas-preprocessor.js`.
 
 ```mermaid
 flowchart TD
-  A["prepareRuntimeBundle({ mapData, mapMeta, mapConfig })"] --> A0{"preprocess.enabled?"}
-  A0 -- "false" --> P0["buildPassthroughRuntimeBundle(mapData)"]
+  A["preparePreprocessedBundle({ mapData, mapMeta, mapConfig })"] --> A0{"preprocess.enabled?"}
+  A0 -- "false" --> P0["buildPassthroughPreprocessedBundle(mapData)"]
   A0 -- "true" --> B["buildWhitelistModel(mapMeta.whitelist)"]
   B --> C["buildCountryGrouping(mapMeta.grouping, sourceMapData, whitelistModel)"]
   C --> D["prepareRuntimeMapData(sourceMapData, options.preprocess, whitelistModel)"]
@@ -70,5 +70,5 @@ flowchart TD
 | Concern | Owner |
 | --- | --- |
 | Container discovery, config fetch, cache key | Boot (`assets/js/atlas-boot.js`) |
-| GeoJSON transformation, whitelist/grouping/preprocess | Pipeline (`assets/js/runtime/atlas-map-pipeline.js`) |
+| GeoJSON transformation, whitelist/grouping/preprocess | Preprocessor (`assets/js/runtime/atlas-preprocessor.js`) |
 | Stage machine, layer mount, pointer events, preview coupling | Adapter (`assets/adapter/leaflet/*.js`) |

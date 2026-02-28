@@ -1,21 +1,22 @@
 /* ============================================================
-   Module: TDW Atlas Engine — Runtime Map Pipeline
+   Module: TDW Atlas Engine — Runtime Preprocessor Transform
    ------------------------------------------------------------
    Purpose:
-   - Prepare renderer-agnostic runtime map artifacts in Boot.
-   - Build runtime layer artifacts for one page session.
-   - Keep data transformation out of Core and renderer adapters.
+   - Prepare renderer-agnostic runtime map artifacts.
+   - Build per-map runtime geometry artifacts.
+   - Keep geometry transformations out of adapters.
 
    Public surface (ESM export):
-   - prepareRuntimeBundle({ mapData, mapMeta, mapConfig })
+   - prepareRuntimeMapData(sourceMapData, options)
+   - buildPassthroughPreprocessedBundle(mapData, datasetKey)
    ============================================================ */
 
 import {
   isPlainObject,
   normalizeBool,
   normalizeCountryCode,
-  normalizeGroupId,
 } from '../helpers/atlas-shared.js';
+import { isCountryIncluded } from './atlas-preprocessor-whitelist.js';
 
 /* ============================================================
    1) MODULE INIT
@@ -25,19 +26,13 @@ const root = typeof window !== 'undefined' ? window : globalThis;
 root.TDW = root.TDW || {};
 root.TDW.Atlas = root.TDW.Atlas || {};
 
-const SCOPE = 'ATLAS MAP-PIPELINE';
+const SCOPE = 'ATLAS PREPROCESSOR';
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
-const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
-const GROUP_MODE_SET = 'set';
-const GROUP_MODE_GEOJSON = 'geojson';
-const GROUP_MODE_OFF = 'off';
-const UNGROUPED_FALLBACK_ID = 'ungrouped';
+export const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
 const DEFAULT_COUNTRY_CODE_ALIASES = Object.freeze({
   // Natural Earth ships Somaliland as ADM0_A3=SOL without usable ISO_A2.
   SOL: 'SO',
@@ -70,22 +65,17 @@ const DEFAULT_GEOMETRY_QUALITY = Object.freeze({
  * @param {string} fallback
  * @returns {string}
  */
-function normalizeDatasetKey(value, fallback = 'world-v1') {
+export function normalizeDatasetKey(value, fallback = 'world-v1') {
   const key = String(value || '').trim().toLowerCase();
   return key || fallback;
 }
 
 /**
- * @param {unknown} value
- * @param {boolean} fallback
- * @returns {boolean}
- */
-/**
  * @param {object} properties
  * @param {Record<string, string>} countryCodeAliases
  * @returns {string}
  */
-function resolveCountryCode(properties, countryCodeAliases = DEFAULT_COUNTRY_CODE_ALIASES) {
+export function resolveCountryCode(properties, countryCodeAliases = DEFAULT_COUNTRY_CODE_ALIASES) {
   const props = isPlainObject(properties) ? properties : {};
   const primary = normalizeCountryCode(props.ISO_A2_EH);
   if (COUNTRY_CODE_PATTERN.test(primary)) return primary;
@@ -105,7 +95,7 @@ function resolveCountryCode(properties, countryCodeAliases = DEFAULT_COUNTRY_COD
  * @param {string} fallbackCode
  * @returns {string}
  */
-function resolveCountryName(properties, fallbackCode) {
+export function resolveCountryName(properties, fallbackCode) {
   const props = isPlainObject(properties) ? properties : {};
   return String(props.NAME_EN || props.NAME || props.ADMIN || fallbackCode || '').trim();
 }
@@ -138,8 +128,9 @@ function resolveCountryNameFromCode(countryCode, fallbackName = '') {
  * @param {object} geojson
  * @returns {object[]}
  */
-function getFeatureList(geojson) {
+export function getFeatureList(geojson) {
   if (!isPlainObject(geojson) || geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with empty fallback feature list.
     throw new Error('GeoJSON must be a FeatureCollection with a features array.');
   }
   return geojson.features;
@@ -215,6 +206,7 @@ function splitToPolygonFeatures(feature, featureIndex, countryCode, countryName,
   const baseProps = isPlainObject(feature?.properties) ? { ...feature.properties } : {};
 
   if (!isPlainObject(geometry) || !Array.isArray(geometry.coordinates)) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by skipping malformed features.
     throw new Error(`Feature #${featureIndex} has invalid geometry.`);
   }
 
@@ -254,6 +246,7 @@ function splitToPolygonFeatures(feature, featureIndex, countryCode, countryName,
     }));
   }
 
+  // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by skipping unsupported geometry types.
   throw new Error(`Unsupported geometry type "${String(geometry.type)}" in feature #${featureIndex}.`);
 }
 
@@ -283,6 +276,7 @@ function keepAll(polygonParts) {
 function keepTopN(polygonParts, topN) {
   const n = Number.isInteger(topN) ? topN : Number.parseInt(String(topN || ''), 10);
   if (!Number.isFinite(n) || n <= 0) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by falling back to keepLargestPolygon.
     throw new Error('keepTopN requires a positive integer topN value.');
   }
   return [...polygonParts]
@@ -358,6 +352,7 @@ function applyMultiPolygonTask(polygonParts, task) {
   if (mode === 'keepTopN') return keepTopN(polygonParts, task?.topN);
   if (mode === 'dropParts') return dropParts(polygonParts, task?.dropPartIndexes);
 
+  // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by falling back to keepLargestPolygon.
   throw new Error(`Unsupported multiPolygon mode "${mode}".`);
 }
 
@@ -567,7 +562,7 @@ function resolvePartRules(preprocessConfig) {
  * @param {object} preprocessConfig
  * @returns {Record<string, string>}
  */
-function resolveCountryCodeAliases(preprocessConfig) {
+export function resolveCountryCodeAliases(preprocessConfig) {
   const rawAliases = isPlainObject(preprocessConfig?.countryCodeAliases)
     ? preprocessConfig.countryCodeAliases
     : {};
@@ -582,242 +577,6 @@ function resolveCountryCodeAliases(preprocessConfig) {
   }
 
   return aliases;
-}
-
-/**
- * @param {object} mapMeta
- * @returns {{enabled: boolean, defaultIncluded: boolean, includeByCountry: Record<string, boolean>}}
- */
-function buildWhitelistModel(mapMeta) {
-  const whitelist = isPlainObject(mapMeta?.whitelist) ? mapMeta.whitelist : null;
-  if (!whitelist) {
-    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with implicit whitelist defaults.
-    throw new Error('mapMeta.whitelist is required and must be an object.');
-  }
-
-  const includeByCountryRaw = isPlainObject(whitelist.includeByCountry) ? whitelist.includeByCountry : {};
-  const includeByCountry = {};
-
-  for (const [rawCountry, rawFlag] of Object.entries(includeByCountryRaw)) {
-    const country = normalizeCountryCode(rawCountry);
-    if (!COUNTRY_CODE_PATTERN.test(country)) continue;
-    includeByCountry[country] = normalizeBool(rawFlag, false);
-  }
-
-  return {
-    enabled: normalizeBool(whitelist.enabled, true),
-    defaultIncluded: normalizeBool(whitelist.defaultIncluded, false),
-    includeByCountry,
-  };
-}
-
-/**
- * @param {string} countryCode
- * @param {{enabled: boolean, defaultIncluded: boolean, includeByCountry: Record<string, boolean>}} whitelistModel
- * @returns {boolean}
- */
-function isCountryIncluded(countryCode, whitelistModel) {
-  if (!whitelistModel.enabled) return true;
-  if (Object.prototype.hasOwnProperty.call(whitelistModel.includeByCountry, countryCode)) {
-    return whitelistModel.includeByCountry[countryCode] === true;
-  }
-  return whitelistModel.defaultIncluded === true;
-}
-
-/**
- * @param {object[]} sourceFeatures
- * @param {{enabled: boolean, defaultIncluded: boolean, includeByCountry: Record<string, boolean>}} whitelistModel
- * @param {Record<string, string>} countryCodeAliases
- * @returns {string[]}
- */
-function deriveIncludedCountriesFromSource(sourceFeatures, whitelistModel, countryCodeAliases) {
-  const included = new Set();
-
-  for (const feature of sourceFeatures) {
-    const countryCode = resolveCountryCode(feature?.properties || {}, countryCodeAliases);
-    if (!COUNTRY_CODE_PATTERN.test(countryCode)) continue;
-    if (!isCountryIncluded(countryCode, whitelistModel)) continue;
-    included.add(countryCode);
-  }
-
-  const list = Array.from(included).sort();
-  if (!list.length) {
-    throw new Error('Whitelist excluded all countries from source map data.');
-  }
-
-  return list;
-}
-
-/**
- * @param {object} mapMeta
- * @param {object} sourceMapData
- * @param {{enabled: boolean, defaultIncluded: boolean, includeByCountry: Record<string, boolean>}} whitelistModel
- * @param {Record<string, string>} countryCodeAliases
- * @returns {{enabled: boolean, mode: string, setKey: string, geojsonProperty: string, groups: Record<string, string[]>, countryToRegion: Record<string, string>, includedCountries: string[], groupLabels: Record<string,string>, diagnostics: object}}
- */
-function buildCountryGrouping(mapMeta, sourceMapData, whitelistModel, countryCodeAliases) {
-  const grouping = isPlainObject(mapMeta?.grouping) ? mapMeta.grouping : null;
-  if (!grouping) {
-    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with grouping disabled by default.
-    throw new Error('mapMeta.grouping is required and must be an object.');
-  }
-
-  const sourceFeatures = getFeatureList(sourceMapData);
-  const enabled = normalizeBool(grouping.enabled, true);
-  const requestedMode = String(grouping.mode || GROUP_MODE_SET).trim().toLowerCase();
-  const mode = [GROUP_MODE_SET, GROUP_MODE_GEOJSON, GROUP_MODE_OFF].includes(requestedMode) ? requestedMode : GROUP_MODE_SET;
-
-  const base = {
-    enabled: enabled && mode !== GROUP_MODE_OFF,
-    mode: enabled ? mode : GROUP_MODE_OFF,
-    setKey: String(grouping.setKey || '').trim(),
-    geojsonProperty: String(grouping.geojsonProperty || '').trim(),
-    groups: {},
-    countryToRegion: {},
-    includedCountries: deriveIncludedCountriesFromSource(sourceFeatures, whitelistModel, countryCodeAliases),
-    groupLabels: {},
-    diagnostics: {},
-  };
-
-  if (!base.enabled || base.mode === GROUP_MODE_OFF) {
-    base.mode = GROUP_MODE_OFF;
-    return base;
-  }
-
-  if (base.mode === GROUP_MODE_SET) {
-    const rawCountryToRegion = grouping.countryToRegion;
-    if (!isPlainObject(rawCountryToRegion)) {
-      throw new Error('Grouping mode "set" requires grouping.countryToRegion object.');
-    }
-
-    const countryToRegion = {};
-    const groups = {};
-    const labelsRaw = isPlainObject(grouping.regionLabels) ? grouping.regionLabels : {};
-    const groupLabels = {};
-    const fallbackAssigned = [];
-
-    for (const [rawCountry, rawRegion] of Object.entries(rawCountryToRegion)) {
-      const countryCode = normalizeCountryCode(rawCountry);
-      const groupId = normalizeGroupId(rawRegion);
-
-      if (!COUNTRY_CODE_PATTERN.test(countryCode)) {
-        throw new Error(`grouping.countryToRegion contains invalid country code "${rawCountry}".`);
-      }
-
-      if (!groupId) {
-        throw new Error(`grouping.countryToRegion contains empty region id for country "${countryCode}".`);
-      }
-
-      if (countryToRegion[countryCode]) {
-        throw new Error(`grouping.countryToRegion contains duplicate country assignment "${countryCode}".`);
-      }
-
-      countryToRegion[countryCode] = groupId;
-    }
-
-    const sourceCountrySet = new Set(base.includedCountries);
-    const unmappedInSource = Object.keys(countryToRegion).filter((countryCode) => !sourceCountrySet.has(countryCode));
-    const includedCountries = [];
-    for (const countryCode of base.includedCountries) {
-      let groupId = String(countryToRegion[countryCode] || '').trim();
-      if (!groupId) {
-        // Keep runtime alive when whitelist includes countries outside explicit set-members.
-        groupId = UNGROUPED_FALLBACK_ID;
-        countryToRegion[countryCode] = groupId;
-        fallbackAssigned.push(countryCode);
-      }
-      includedCountries.push(countryCode);
-
-      if (!groups[groupId]) groups[groupId] = [];
-      groups[groupId].push(countryCode);
-    }
-
-    if (fallbackAssigned.length) {
-      dwarn('Grouping mode "set": countries without mapping were assigned to fallback group.', {
-        fallbackGroup: UNGROUPED_FALLBACK_ID,
-        count: fallbackAssigned.length,
-        sample: fallbackAssigned.slice(0, 12),
-      });
-    }
-
-    for (const groupId of Object.keys(groups)) {
-      groups[groupId].sort();
-      const fromMeta = String(labelsRaw[groupId] || '').trim();
-      if (groupId === UNGROUPED_FALLBACK_ID) {
-        groupLabels[groupId] = fromMeta || 'Ungrouped';
-      } else {
-        groupLabels[groupId] = fromMeta || groupId;
-      }
-    }
-
-    return {
-      ...base,
-      groups,
-      countryToRegion,
-      includedCountries,
-      groupLabels,
-      diagnostics: {
-        templateCountriesMissingInSource: unmappedInSource,
-      },
-    };
-  }
-
-  if (base.mode === GROUP_MODE_GEOJSON) {
-    const property = base.geojsonProperty;
-    if (!property) {
-      throw new Error('Grouping mode "geojson" requires grouping.geojsonProperty.');
-    }
-
-    const countryToRegion = {};
-    const groups = {};
-
-    for (const feature of sourceFeatures) {
-      const props = isPlainObject(feature?.properties) ? feature.properties : {};
-      const countryCode = resolveCountryCode(props, countryCodeAliases);
-      if (!COUNTRY_CODE_PATTERN.test(countryCode)) continue;
-      if (!isCountryIncluded(countryCode, whitelistModel)) continue;
-
-      const rawGroup = props[property];
-      const groupId = normalizeGroupId(rawGroup);
-      if (!groupId) {
-        throw new Error(`Grouping mode "geojson" missing property "${property}" for country "${countryCode}".`);
-      }
-
-      const existing = countryToRegion[countryCode] || '';
-      if (existing && existing !== groupId) {
-        throw new Error(`Grouping mode "geojson" has conflicting groups for country "${countryCode}".`);
-      }
-
-      countryToRegion[countryCode] = groupId;
-    }
-
-    const includedCountries = Object.keys(countryToRegion).sort();
-    if (!includedCountries.length) {
-      throw new Error('Grouping mode "geojson" produced no country assignments.');
-    }
-
-    for (const countryCode of includedCountries) {
-      const groupId = countryToRegion[countryCode];
-      if (!groups[groupId]) groups[groupId] = [];
-      groups[groupId].push(countryCode);
-    }
-
-    const groupLabels = {};
-    for (const groupId of Object.keys(groups)) {
-      groups[groupId].sort();
-      groupLabels[groupId] = groupId;
-    }
-
-    return {
-      ...base,
-      groups,
-      countryToRegion,
-      includedCountries,
-      groupLabels,
-    };
-  }
-
-  throw new Error(`Unsupported grouping mode "${base.mode}".`);
 }
 
 /**
@@ -845,90 +604,6 @@ function emitArtifacts(runtimeFeatures, audit) {
   };
 }
 
-/**
- * @param {object} runtimeMap
- * @param {{groups: Record<string, string[]>, countryToRegion: Record<string, string>, groupLabels: Record<string,string>}} countryGrouping
- * @returns {object}
- */
-function applyCountryGroupingToRuntimeMap(runtimeMap, countryGrouping) {
-  const features = getFeatureList(runtimeMap);
-  const annotated = [];
-
-  for (const feature of features) {
-    const props = isPlainObject(feature?.properties) ? feature.properties : {};
-    const countryCode = normalizeCountryCode(props.tdwCountryCode || props.ISO_A2_EH || props.ISO_A2 || '');
-    if (!COUNTRY_CODE_PATTERN.test(countryCode)) {
-      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by skipping unmapped parts.
-      throw new Error('Runtime feature missing country code after preprocessing.');
-    }
-
-    const groupId = String(countryGrouping?.countryToRegion?.[countryCode] || '').trim();
-    if (!groupId) {
-      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by skipping unknown group assignments.
-      throw new Error(`No group assignment found for country "${countryCode}".`);
-    }
-
-    annotated.push({
-      ...feature,
-      properties: {
-        ...props,
-        tdwCountryCode: countryCode,
-        tdwGroupId: groupId,
-        tdwGroupLabel: String(countryGrouping?.groupLabels?.[groupId] || groupId),
-        tdwCountryName: String(props.tdwCountryName || props.NAME_EN || props.NAME || props.ADMIN || countryCode),
-      },
-    });
-  }
-
-  if (!annotated.length) {
-    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with an empty map canvas.
-    throw new Error('Country grouping assignment produced no features.');
-  }
-
-  return {
-    type: 'FeatureCollection',
-    features: annotated,
-  };
-}
-
-/**
- * @param {object} runtimeMap
- * @returns {object}
- */
-function cloneRuntimeMap(runtimeMap) {
-  return {
-    type: 'FeatureCollection',
-    features: getFeatureList(runtimeMap).map((feature) => ({
-      ...feature,
-      properties: isPlainObject(feature?.properties) ? { ...feature.properties } : {},
-    })),
-  };
-}
-
-/**
- * @param {object} groupedRuntimeMap
- * @returns {object}
- */
-function toRegionLayerRuntimeMap(groupedRuntimeMap) {
-  const cloned = cloneRuntimeMap(groupedRuntimeMap);
-  cloned.features = cloned.features.map((feature) => {
-    const props = isPlainObject(feature?.properties) ? feature.properties : {};
-    const groupId = String(props.tdwGroupId || '').trim();
-    const groupLabel = String(props.tdwGroupLabel || groupId || 'group').trim();
-
-    return {
-      ...feature,
-      properties: {
-        ...props,
-        tdwLayerKind: 'region',
-        tdwDisplayName: groupLabel,
-      },
-    };
-  });
-
-  return cloned;
-}
-
 /* ============================================================
    3) PUBLIC API
    ============================================================ */
@@ -940,7 +615,7 @@ function toRegionLayerRuntimeMap(groupedRuntimeMap) {
  * @param {{whitelistModel: object, preprocess?: object, datasetKey?: string, countryCodeAliases?: Record<string,string>}} options
  * @returns {{runtimeMap: object, audit: object}}
  */
-function prepareRuntimeMapData(sourceMapData, options = {}) {
+export function prepareRuntimeMapData(sourceMapData, options = {}) {
   const sourceFeatures = getFeatureList(sourceMapData);
   const preprocess = isPlainObject(options?.preprocess) ? options.preprocess : {};
   const preprocessEnabled = normalizeBool(preprocess?.enabled, true);
@@ -954,7 +629,8 @@ function prepareRuntimeMapData(sourceMapData, options = {}) {
 
   const whitelistModel = isPlainObject(options?.whitelistModel) ? options.whitelistModel : null;
   if (!whitelistModel) {
-    throw new Error('Runtime pipeline requires whitelistModel.');
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with implicit include-all whitelist.
+    throw new Error('Runtime preprocessor requires whitelistModel.');
   }
 
   const datasetKey = normalizeDatasetKey(options?.datasetKey, 'world-v1');
@@ -1031,7 +707,7 @@ function prepareRuntimeMapData(sourceMapData, options = {}) {
  *   diagnostics: object
  * }}
  */
-function buildPassthroughRuntimeBundle(mapData, datasetKey) {
+export function buildPassthroughPreprocessedBundle(mapData, datasetKey) {
   const sourceFeatures = getFeatureList(mapData);
   const includedCountries = new Set();
   const passthroughFeatures = sourceFeatures.map((feature, index) => {
@@ -1059,7 +735,8 @@ function buildPassthroughRuntimeBundle(mapData, datasetKey) {
   });
 
   if (!passthroughFeatures.length) {
-    throw new Error('Runtime pipeline passthrough produced no map features.');
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with empty passthrough map.
+    throw new Error('Runtime preprocessor passthrough produced no map features.');
   }
 
   const countryAudit = {
@@ -1101,106 +778,10 @@ function buildPassthroughRuntimeBundle(mapData, datasetKey) {
     countryAudit,
     regionAudit: null,
     diagnostics: {
-      pipelineMode: 'passthrough',
+      preprocessorMode: 'passthrough',
       templateCountriesMissingInSource: [],
     },
   };
-}
-
-/**
- * Prepare runtime bundle in Boot before Core/Adapter startup.
- *
- * @param {{mapData: object, mapMeta: object, mapConfig: object}} params
- * @returns {{
- *   datasetKey: string,
- *   flags: {preprocessEnabled: boolean, whitelistEnabled: boolean, groupingEnabled: boolean, groupingMode: string, regionLayerEnabled: boolean},
- *   countryGrouping: object,
- *   countryRuntimeMap: object,
- *   regionRuntimeMap: object|null,
- *   countryAudit: object,
- *   regionAudit: object|null,
- *   diagnostics: object
- * }}
- */
-export function prepareRuntimeBundle({ mapData, mapMeta, mapConfig } = {}) {
-  try {
-    if (!isPlainObject(mapData)) {
-      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak mapData assumptions.
-      throw new Error('Runtime pipeline requires mapData object.');
-    }
-    if (!isPlainObject(mapMeta)) {
-      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with implicit mapMeta defaults.
-      throw new Error('Runtime pipeline requires mapMeta object.');
-    }
-    if (!isPlainObject(mapConfig)) {
-      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak mapConfig assumptions.
-      throw new Error('Runtime pipeline requires mapConfig object.');
-    }
-
-    const preprocess = isPlainObject(mapMeta?.preprocess) ? mapMeta.preprocess : {};
-    const preprocessEnabled = normalizeBool(preprocess?.enabled, true);
-    const datasetKey = normalizeDatasetKey(mapConfig?.datasetKey || mapMeta?.datasetKey || '', 'world-v1');
-
-    if (!preprocessEnabled) {
-      dlog('Runtime pipeline running in passthrough mode (preprocess.enabled=0).');
-      return buildPassthroughRuntimeBundle(mapData, datasetKey);
-    }
-
-    const buildRegionLayer = normalizeBool(mapMeta?.regionLayer?.enabled, true);
-    const countryCodeAliases = resolveCountryCodeAliases(preprocess);
-    const whitelistModel = buildWhitelistModel(mapMeta);
-    const countryGrouping = buildCountryGrouping(mapMeta, mapData, whitelistModel, countryCodeAliases);
-
-    const countryPrepared = prepareRuntimeMapData(mapData, {
-      whitelistModel,
-      preprocess,
-      datasetKey,
-      countryCodeAliases,
-    });
-
-    const countryRuntimeMap = countryGrouping.enabled
-      ? applyCountryGroupingToRuntimeMap(countryPrepared.runtimeMap, countryGrouping)
-      : countryPrepared.runtimeMap;
-
-    let regionRuntimeMap = null;
-    let regionAudit = null;
-    if (buildRegionLayer && countryGrouping.enabled) {
-      regionRuntimeMap = toRegionLayerRuntimeMap(countryRuntimeMap);
-      regionAudit = {
-        ...countryPrepared.audit,
-        source: 'countryRuntimeMap',
-      };
-    } else if (buildRegionLayer && !countryGrouping.enabled) {
-      dwarn('Region layer requested but grouping is disabled/off; region layer skipped.');
-    }
-
-    const flags = {
-      preprocessEnabled: true,
-      whitelistEnabled: whitelistModel.enabled,
-      groupingEnabled: countryGrouping.enabled,
-      groupingMode: countryGrouping.mode || 'off',
-      regionLayerEnabled: !!regionRuntimeMap,
-    };
-
-    return {
-      datasetKey,
-      flags,
-      countryGrouping,
-      countryRuntimeMap,
-      regionRuntimeMap,
-      countryAudit: countryPrepared.audit,
-      regionAudit,
-      diagnostics: {
-        pipelineMode: 'preprocessed',
-        templateCountriesMissingInSource: Array.isArray(countryGrouping?.diagnostics?.templateCountriesMissingInSource)
-          ? countryGrouping.diagnostics.templateCountriesMissingInSource
-          : [],
-      },
-    };
-  } catch (err) {
-    derror('prepareRuntimeBundle failed.', { err });
-    throw err;
-  }
 }
 
 /* ============================================================

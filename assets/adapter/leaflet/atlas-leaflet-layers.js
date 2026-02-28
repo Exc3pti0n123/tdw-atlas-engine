@@ -14,11 +14,9 @@ import { isPlainObject } from '../../js/helpers/atlas-shared.js';
 
 const SCOPE = 'ATLAS LF-LAYERS';
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 export const HYBRID_KIND_REGION = 'region';
 export const HYBRID_KIND_COUNTRY = 'country';
@@ -163,10 +161,12 @@ export function buildHybridRuntimeMapData({ countryRuntimeMap, regionRuntimeMap,
   const regionFeatures = getRuntimeMapFeatures(regionRuntimeMap);
 
   if (!groupId) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by staying on world layer.
     throw new Error('Hybrid runtime map requires activeGroupId.');
   }
 
   if (!countryFeatures.length || !regionFeatures.length) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with region-only or country-only rendering.
     throw new Error('Hybrid runtime map requires both countryRuntimeMap and regionRuntimeMap features.');
   }
 

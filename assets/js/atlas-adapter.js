@@ -21,11 +21,9 @@ window.TDW.Atlas.Adapter = window.TDW.Atlas.Adapter || {};
 const SCOPE = 'ATLAS ADAPTER';
 const existing = window.TDW.Atlas.Adapter;
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 const REQUIRED_ADAPTER_METHODS = ['init', 'onResize', 'destroy'];
 const ADAPTER_MODULES = {
@@ -67,6 +65,7 @@ async function loadAdapterModule(adapterKey) {
   try {
     return await import(modulePath);
   } catch (err) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by skipping this adapter instance.
     throw new Error(`Failed to import adapter module for key "${adapterKey}": ${String(err?.message || err)}`);
   }
 }

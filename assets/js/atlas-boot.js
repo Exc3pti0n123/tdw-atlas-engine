@@ -8,7 +8,7 @@
    - Wait for DOM ready.
    - Discover Atlas containers.
    - Load runtime config once via data-config-url.
-   - Build renderer-agnostic runtime bundle via pipeline.
+   - Build renderer-agnostic runtime bundle via preprocessor.
    - Build adapter instance via Adapter Factory.
    - Create Core instance and run core.init({ adapter, el, mapData, mapMeta, adapterConfig }).
 
@@ -17,7 +17,7 @@
    - No renderer implementation.
    ============================================================ */
 
-import { prepareRuntimeBundle } from './runtime/atlas-map-pipeline.js';
+import { preparePreprocessedBundle } from './runtime/atlas-preprocessor.js';
 
 /* ============================================================
    1) MODULE INIT
@@ -29,23 +29,27 @@ const runtimeBundleCache = new Map();
 
 const SCOPE = 'ATLAS BOOT';
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 const _logger = window?.TDW?._logger || {};
 const _setDebug = typeof _logger.setDebugEnabled === 'function' ? _logger.setDebugEnabled : () => {};
 const _isDebug = typeof _logger.isDebugEnabled === 'function' ? _logger.isDebugEnabled : () => false;
 const cookieOps = window?.TDW?.Atlas?.CookieOps || null;
 
+/**
+ * Apply Atlas debug state to all runtime scopes.
+ *
+ * @param {boolean} enabled Debug enabled flag.
+ * @returns {void}
+ */
 function setAtlasDebug(enabled) {
   const value = Boolean(enabled);
   _setDebug('ATLAS BOOT', value);
   _setDebug('ATLAS CORE', value);
   _setDebug('ATLAS ADAPTER', value);
   _setDebug('ATLAS LF-ADAPTER', value);
-  _setDebug('ATLAS MAP-PIPELINE', value);
+  _setDebug('ATLAS PREPROCESSOR', value);
   _setDebug('ATLAS COOKIE-OPS', value);
 }
 
@@ -358,17 +362,18 @@ async function bootOne(el, createCore, createAdapter, shared) {
     runtimeBundle = await getOrCreateCachedRuntimeBundle(runtimeCacheKey, async () => {
       const sourceMapData = await loadJsonResource('GeoJSON', geojsonUrl, el);
       if (!sourceMapData) {
-        throw new Error('GeoJSON load failed before runtime pipeline.');
+        // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by skipping this map instance.
+        throw new Error('GeoJSON load failed before runtime preprocessor.');
       }
-      return prepareRuntimeBundle({
+      return preparePreprocessedBundle({
         mapData: sourceMapData,
         mapMeta,
         mapConfig,
       });
     });
   } catch (err) {
-    const reason = String(err?.message || err || 'Unknown pipeline error');
-    derror(el, `Runtime pipeline failed for map id: ${mapId}. Cause: ${reason}`, { mapId, err });
+    const reason = String(err?.message || err || 'Unknown preprocessor error');
+    derror(el, `Runtime preprocessor failed for map id: ${mapId}. Cause: ${reason}`, { mapId, err });
     return;
   }
 

@@ -24,11 +24,9 @@ window.TDW.Atlas.CookieOps = window.TDW.Atlas.CookieOps || {};
 const SCOPE = 'ATLAS COOKIE-OPS';
 const existing = window.TDW.Atlas.CookieOps;
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 const DEFAULT_COOKIE_DAYS = 30;
 const DEBUG_COOKIE_NAME = 'tdw_atlas_debug';
@@ -58,6 +56,12 @@ function getClient() {
   return _client;
 }
 
+/**
+ * Build cookie attributes including normalized expiry days.
+ *
+ * @param {{days?: number, attributes?: object}} [options={}] Attribute options.
+ * @returns {object} Cookie attribute object.
+ */
 function buildAttributes(options = {}) {
   const attrs = Object.assign({}, options.attributes || {});
   const days = Number.isFinite(options.days) ? Number(options.days) : DEFAULT_COOKIE_DAYS;
@@ -65,6 +69,12 @@ function buildAttributes(options = {}) {
   return attrs;
 }
 
+/**
+ * Read raw cookie value by name.
+ *
+ * @param {string} name Cookie key.
+ * @returns {string|undefined} Raw cookie value.
+ */
 function getCookieRaw(name) {
   const key = String(name || '').trim();
   if (!key) return undefined;
@@ -75,6 +85,14 @@ function getCookieRaw(name) {
   return client.get(key);
 }
 
+/**
+ * Write raw cookie value by name.
+ *
+ * @param {string} name Cookie key.
+ * @param {string} value Cookie value.
+ * @param {{days?: number, attributes?: object}} [options={}] Write options.
+ * @returns {boolean} True when write succeeded.
+ */
 function setCookieRaw(name, value, options = {}) {
   const key = String(name || '').trim();
   if (!key) return false;
@@ -86,6 +104,12 @@ function setCookieRaw(name, value, options = {}) {
   return true;
 }
 
+/**
+ * Parse cookie value to strict boolean where possible.
+ *
+ * @param {string} name Cookie key.
+ * @returns {boolean|null} Parsed boolean or null when absent/invalid.
+ */
 function getCookieBool(name) {
   const raw = getCookieRaw(name);
   if (raw == null) return null;
@@ -96,15 +120,33 @@ function getCookieBool(name) {
   return null;
 }
 
+/**
+ * Get debug flag from cookie storage.
+ *
+ * @returns {boolean|null} Debug flag or null when unset.
+ */
 function getDebugFlag() {
   return getCookieBool(DEBUG_COOKIE_NAME);
 }
 
+/**
+ * Persist debug flag into cookie storage.
+ *
+ * @param {boolean} enabled Debug flag value.
+ * @param {{days?: number, attributes?: object}} [options={}] Cookie options.
+ * @returns {boolean} True when cookie write succeeded.
+ */
 function setDebugFlag(enabled, options = {}) {
   const withDefaults = Object.assign({ days: DEFAULT_COOKIE_DAYS }, options);
   return setCookieRaw(DEBUG_COOKIE_NAME, enabled ? '1' : '0', withDefaults);
 }
 
+/**
+ * Apply debug flag to all Atlas logger scopes.
+ *
+ * @param {boolean} enabled Debug state.
+ * @returns {void}
+ */
 function applyAtlasDebugScopes(enabled) {
   const setDebugEnabled = window?.TDW?._logger?.setDebugEnabled;
   if (typeof setDebugEnabled !== 'function') return;
@@ -114,6 +156,11 @@ function applyAtlasDebugScopes(enabled) {
   }
 }
 
+/**
+ * Initialize debug scopes from persisted cookie value.
+ *
+ * @returns {boolean|null} Applied debug state or null when cookie is absent.
+ */
 function initDebugFromCookie() {
   const flag = getDebugFlag();
   if (flag === null) return null;

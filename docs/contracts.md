@@ -78,7 +78,7 @@ Notes:
 - Functions in section `2) FUNCTIONS` should use JSDoc (`@param`, `@returns`) for non-trivial behavior.
 - Logger boilerplate is standardized via:
   - `assets/shared/tdw-logger.js`
-  - `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+  - `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 - Shared normalization helpers are centralized in:
   - `assets/js/helpers/atlas-shared.js`
 
@@ -138,11 +138,11 @@ Notes:
 - `maps.{id}.grouping` is required and controls grouping mode (`set|geojson|off`).
 - `maps.{id}.whitelist` is required and controls include/exclude policy independently of grouping.
 - `maps.{id}.preprocess` is required and contains geometry preprocessing policy.
-- `maps.{id}.preprocess.enabled` is the master switch for the runtime pipeline:
-  - `true/1`: pipeline runs (whitelist, grouping, part-rules, geometry preprocessing).
-  - `false/0`: pipeline runs in passthrough mode and pipeline-managed settings (`whitelist`, `grouping`, `part-rules`, geometry tasks) are ignored for that map instance.
+- `maps.{id}.preprocess.enabled` is the master switch for the runtime preprocessor:
+  - `true/1`: preprocessor runs (whitelist, grouping, part-rules, geometry preprocessing).
+  - `false/0`: preprocessor runs in passthrough mode and preprocessor-managed settings (`whitelist`, `grouping`, `part-rules`, geometry tasks) are ignored for that map instance.
 - `groupingTemplate` is seed-only metadata; Boot must not fetch this file at runtime.
-- `maps.{id}.regionLayer.enabled` is optional, default `true`; runtime pipeline uses it to enable/disable grouped region runtime layer preparation.
+- `maps.{id}.regionLayer.enabled` is optional, default `true`; runtime preprocessor uses it to enable/disable grouped region runtime layer preparation.
 - `maps.{id}.focus` is optional and controls map focus paddings per interaction stage:
   - `focus.world.padding` for initial world fit and return-to-world fit.
   - `focus.region.padding` for region-level fly/fit interactions.
@@ -240,7 +240,7 @@ For runtime sequencing see Contract 17.
 - No module may call `console.log` or `console.warn` directly.
 - `console.error` is only allowed as a hard fallback if the logger is unavailable.
 - Atlas module boilerplate must use:
-  - `const { dlog, dwarn, derror } = window.TDW.Logger.createScopedLogger(SCOPE);`
+  - `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 - Direct `window.TDW._logger.log/warn/error` calls are reserved for:
   - `assets/shared/tdw-logger.js`
 
@@ -356,7 +356,7 @@ All public plugin JS attaches under:
 - Core is a **factory**, not a singleton.
 - Core does **not** scan the DOM.
 - Core does **not** fetch data.
-- Core forwards normalized runtime payload to adapter (`mapData`, `mapMeta`, `adapterConfig`), where `mapData` is the prepared runtime bundle from Boot pipeline.
+- Core forwards normalized runtime payload to adapter (`mapData`, `mapMeta`, `adapterConfig`), where `mapData` is the prepared runtime bundle from Boot preprocessor.
 
 ---
 
@@ -407,7 +407,7 @@ Adapters must implement:
   - Compute runtime cache key from effective map signature.
   - Fetch GeoJSON from `maps[mapId].geojson` on cache miss only.
   - Build `mapMeta` from runtime config (`grouping`, `whitelist`, `preprocess`, `regionLayer`).
-  - Build prepared runtime bundle via `assets/js/runtime/atlas-map-pipeline.js` (`prepareRuntimeBundle({ mapData, mapMeta, mapConfig })`).
+  - Build prepared runtime bundle via `assets/js/runtime/atlas-preprocessor.js` (`preparePreprocessedBundle({ mapData, mapMeta, mapConfig })`).
   - Build adapter runtime config (`vendor`, map config, optional view preset), including `maps.{id}.ui.preview`.
   - Create a Core instance and call `core.init(...)` with adapter + `mapData` + `mapMeta` + `adapterConfig`.
 

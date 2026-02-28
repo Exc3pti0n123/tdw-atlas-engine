@@ -165,10 +165,8 @@ function createScopedLogger(scope) {
   return { dlog, dwarn, derror };
 }
 
-const { dlog, dwarn, derror } = createScopedLogger(SCOPE);
-
 /* ============================================================
-   3) EXPORT
+   3) PUBLIC API
    ============================================================ */
 
 // Publish/merge onto the stable global object (do not overwrite if already present).
@@ -184,6 +182,14 @@ if (typeof existing.createScopedLogger !== 'function') existing.createScopedLogg
 if (typeof window.TDW.Logger.createScopedLogger !== 'function') {
   window.TDW.Logger.createScopedLogger = createScopedLogger;
 }
+
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
+
+/* ============================================================
+   4) AUTO-RUN
+   ============================================================ */
 
 // Keep scoped shorthand active in this module without side effects.
 void dlog;

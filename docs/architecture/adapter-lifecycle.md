@@ -37,18 +37,39 @@
    - World/hybrid hover routing.
    - World/hybrid click routing.
 5. `assets/adapter/leaflet/atlas-leaflet-transition.js`
-   - Tokenized transition controller.
-   - Atomic stage commit guard.
+   - Tokenized transition runtime.
+   - Stage-specific contract validation.
+   - Stage target resolution for world/region/country.
 
-## Runtime Pipeline Boundary
+## Leaflet Intra-File Orchestration (Current)
 
-1. Boot delegates data preparation to `assets/js/runtime/atlas-map-pipeline.js`.
-2. Pipeline owns multipolygon mini-workflow (`split -> micro cleanup -> task -> setPolygonId`).
-3. Pipeline owns whitelist application, grouping mode resolution (`set|geojson|off`), and runtime assignment on features.
-4. Pipeline emits runtime bundle artifacts (`countryRuntimeMap`, optional `regionRuntimeMap`, grouping metadata, diagnostics).
-5. `mapMeta.preprocess.enabled` is the master switch:
-   - `true`: pipeline runs full preprocessing path.
-   - `false`: pipeline runs passthrough path; grouping/whitelist/part-rules are ignored for this instance.
+`assets/adapter/leaflet/atlas-leaflet.js` keeps one-file runtime orchestration with fixed in-file sections:
+
+1. `STATE HELPERS`
+2. `PREVIEW OPS`
+3. `FOCUS OPS`
+4. `LAYER OPS`
+5. `STAGE OPS`
+6. `INIT PIPELINE`
+7. `PUBLIC API`
+
+Notes:
+1. `atlas-leaflet-transition.js` remains a single standalone module.
+2. `init()` is a linear orchestrator over internal setup steps (validate -> hydrate -> preview -> map -> layers -> transitions -> mount -> background events -> diagnostics).
+
+## Runtime Preprocessor Boundary
+
+1. Boot delegates data preparation to `assets/js/runtime/atlas-preprocessor.js`.
+2. Preprocessor split:
+   - `assets/js/runtime/atlas-preprocessor-whitelist.js`
+   - `assets/js/runtime/atlas-preprocessor-grouping.js`
+   - `assets/js/runtime/atlas-preprocessor-transform.js`
+3. Preprocessor owns multipolygon mini-workflow (`split -> micro cleanup -> task -> setPolygonId`).
+4. Preprocessor owns whitelist application, grouping mode resolution (`set|geojson|off`), and runtime assignment on features.
+5. Preprocessor emits runtime bundle artifacts (`countryRuntimeMap`, optional `regionRuntimeMap`, grouping metadata, diagnostics).
+6. `mapMeta.preprocess.enabled` is the master switch:
+   - `true`: preprocessor runs full path.
+   - `false`: preprocessor runs passthrough path; grouping/whitelist/part-rules are ignored for this instance.
 
 ## Runtime Stage Flow (Leaflet)
 
@@ -81,8 +102,8 @@
 ## Ownership Rule (Global vs Adapter-Specific)
 
 1. Grouping/whitelist data is global domain data (DB-assembled, adapter-agnostic).
-2. Leaflet consumes prepared runtime bundle artifacts from Boot pipeline.
-3. Geometry preprocessing strategy and part-rules execution are owned by runtime pipeline, not by renderer adapters.
+2. Leaflet consumes prepared runtime bundle artifacts from Boot preprocessor.
+3. Geometry preprocessing strategy and part-rules execution are owned by runtime preprocessor, not by renderer adapters.
 
 ## Isolation Rule
 

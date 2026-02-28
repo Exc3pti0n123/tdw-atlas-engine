@@ -4,7 +4,7 @@
 sequenceDiagram
   participant WP as WordPress
   participant BOOT as Atlas Boot
-  participant PIPE as Runtime Pipeline
+  participant PIPE as Runtime Preprocessor
   participant AF as Adapter Factory
   participant CORE as Atlas Core
   participant ADP as Leaflet Adapter
@@ -18,7 +18,7 @@ sequenceDiagram
   BOOT->>AF: create(adapterKey, mapId, el)
   AF->>ADP: dynamic import + createAdapter
   AF-->>BOOT: adapter instance
-  BOOT->>PIPE: prepareRuntimeBundle({mapData,mapMeta,mapConfig})
+  BOOT->>PIPE: preparePreprocessedBundle({mapData,mapMeta,mapConfig})
   PIPE-->>BOOT: runtime bundle (country/region maps + grouping + diagnostics)
   BOOT->>CORE: create()
   BOOT->>CORE: init({adapter, el, mapData, mapMeta, adapterConfig})

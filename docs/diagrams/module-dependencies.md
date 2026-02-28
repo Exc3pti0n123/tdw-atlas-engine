@@ -9,7 +9,10 @@ flowchart TD
   M5 --> M6["tdw-atlas-boot"]
   M6 --> H1["assets/shared/tdw-logger.js"]
   M6 --> H2["assets/js/helpers/atlas-shared.js"]
-  M6 --> P1["assets/js/runtime/atlas-map-pipeline.js"]
+  M6 --> P1["assets/js/runtime/atlas-preprocessor.js"]
+  P1 --> P2["atlas-preprocessor-whitelist.js"]
+  P1 --> P3["atlas-preprocessor-grouping.js"]
+  P1 --> P4["atlas-preprocessor-transform.js"]
   M6 --> C1["runtimeBundleCache (per map signature)"]
   M4 -."dynamic import".-> A1["assets/adapter/leaflet/atlas-leaflet.js"]
   A1 --> H1
@@ -19,5 +22,8 @@ flowchart TD
   A1 --> A4["atlas-leaflet-style.js"]
   A1 --> A5["atlas-leaflet-events.js"]
   A1 --> A6["atlas-leaflet-transition.js"]
+  A1 --> U1["assets/js/ui/atlas-preview.js"]
+  U1 --> U2["atlas-preview-dom.js"]
+  U1 --> U3["atlas-preview-placement.js"]
   A1 -."dynamic import".-> V1["Leaflet ESM"]
 ```

@@ -2,12 +2,26 @@
    Module: TDW Atlas Engine — Leaflet Adapter Factory
    ------------------------------------------------------------
    Purpose:
-   - Adapt Atlas Core contract to Leaflet 2.x renderer.
-   - Orchestrate Leaflet runtime state and interaction stages.
-   - Consume prepared runtime bundle from Boot pipeline.
+   - Adapt Atlas Core contract to Leaflet 2.x.
+   - Orchestrate stage transitions and preview coupling.
+   - Render prepared runtime map artifacts from preprocessor output.
 
-   Public surface (ESM export):
-   - createAdapter() -> { init, onResize, destroy }
+   Responsibilities:
+   - Validate adapter init contract and runtime bundle shape.
+   - Manage Leaflet map/layer lifecycle per container instance.
+   - Keep world/region/country stage behavior deterministic.
+
+   Non-responsibilities:
+   - No fetch of runtime config or geojson data.
+   - No DB or REST writes.
+   - No preprocessor data transformation logic.
+
+   Public surface:
+   - ESM: createAdapter() => { init, onResize, destroy }
+
+   Contracts:
+   - Contract 3 (module structure convention)
+   - Contract 5 (logging + fail-fast behavior)
    ============================================================ */
 
 import { create as createPreviewOverlay } from '../../js/ui/atlas-preview.js';
@@ -44,9 +58,7 @@ import {
 import { createTransitionController } from './atlas-leaflet-transition.js';
 import { isPlainObject } from '../../js/helpers/atlas-shared.js';
 
-/* ============================================================
-   1) MODULE INIT
-   ============================================================ */
+/* MODULE INIT */
 
 window.TDW = window.TDW || {};
 window.TDW.Atlas = window.TDW.Atlas || {};
@@ -65,21 +77,19 @@ const DEFAULT_PREVIEW_CONFIG = Object.freeze({
   switchToBottomMaxWHRatio: 0.85,
 });
 
-const { dlog, dwarn, derror } = window?.TDW?.Logger?.createScopedLogger?.(SCOPE) || {
-  dlog: () => {},
-  dwarn: () => {},
-  derror: (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
-};
+const { dlog = () => {}, dwarn = () => {},
+  derror = (...args) => console.error('[TDW ATLAS FATAL]', `[${SCOPE}]`, ...args),
+} = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};
 
 let leafletModule = null;
 
-/* ============================================================
-   2) FUNCTIONS
-   ============================================================ */
+/* FUNCTIONS */
 
 /**
- * @param {string} url
- * @returns {string}
+ * Build an absolute URL from relative or absolute input.
+ *
+ * @param {string} url Input URL value.
+ * @returns {string} Absolute URL or empty string.
  */
 function toAbsoluteUrl(url) {
   if (!url) return '';
@@ -91,7 +101,10 @@ function toAbsoluteUrl(url) {
 }
 
 /**
- * @param {string} cssUrl
+ * Ensure Leaflet stylesheet is present once in document head.
+ *
+ * @param {string} cssUrl Leaflet CSS URL.
+ * @returns {void}
  */
 function ensureLeafletCss(cssUrl) {
   if (!cssUrl) return;
@@ -109,14 +122,17 @@ function ensureLeafletCss(cssUrl) {
 }
 
 /**
- * @param {object} adapterConfig
- * @returns {Promise<object>}
+ * Lazy-load Leaflet ESM module from adapter vendor config.
+ *
+ * @param {object} adapterConfig Adapter configuration payload.
+ * @returns {Promise<object>} Leaflet module namespace.
  */
 async function loadLeafletModule(adapterConfig) {
   if (leafletModule) return leafletModule;
 
   const jsUrl = adapterConfig?.vendor?.leafletJs;
   if (!jsUrl) {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with implicit global Leaflet.
     throw new Error('Missing adapterConfig.vendor.leafletJs (Leaflet module URL).');
   }
 
@@ -126,8 +142,10 @@ async function loadLeafletModule(adapterConfig) {
 }
 
 /**
- * @param {object} runtimeBundle
- * @returns {boolean}
+ * Validate minimum runtime bundle contract from preprocessor.
+ *
+ * @param {object} runtimeBundle Runtime map bundle candidate.
+ * @returns {boolean} True when required bundle members exist.
  */
 function hasRuntimeBundleContract(runtimeBundle) {
   if (!isPlainObject(runtimeBundle)) return false;
@@ -144,18 +162,22 @@ function hasRuntimeBundleContract(runtimeBundle) {
 }
 
 /**
- * @param {object} moduleNs
- * @returns {{MapCtor: Function, GeoJSONCtor: Function}}
+ * Resolve strict Leaflet constructors required by this adapter.
+ *
+ * @param {object} moduleNs Leaflet module namespace.
+ * @returns {{MapCtor: Function, GeoJSONCtor: Function}} Strict constructors.
  */
 function getStrictConstructors(moduleNs) {
   const MapCtor = moduleNs?.Map;
   const GeoJSONCtor = moduleNs?.GeoJSON;
 
   if (typeof MapCtor !== 'function') {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak vendor assumptions.
     throw new Error('Leaflet 2.x contract error: Map constructor missing.');
   }
 
   if (typeof GeoJSONCtor !== 'function') {
+    // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak vendor assumptions.
     throw new Error('Leaflet 2.x contract error: GeoJSON constructor missing.');
   }
 
@@ -163,8 +185,10 @@ function getStrictConstructors(moduleNs) {
 }
 
 /**
- * @param {object} adapterConfig
- * @returns {object}
+ * Normalize map options for click-only interaction policy.
+ *
+ * @param {object} adapterConfig Adapter configuration payload.
+ * @returns {object} Leaflet map options.
  */
 function resolveMapOptions(adapterConfig) {
   const provided = isPlainObject(adapterConfig?.mapOptions) ? adapterConfig.mapOptions : {};
@@ -189,8 +213,10 @@ function resolveMapOptions(adapterConfig) {
 }
 
 /**
- * @param {object} adapterConfig
- * @returns {{mapId:string,showRegionPreview:boolean,showCountryPreview:boolean,desktopSide:'left'|'right',switchToBottomMaxWHRatio:number}}
+ * Normalize preview settings with safe defaults.
+ *
+ * @param {object} adapterConfig Adapter configuration payload.
+ * @returns {{mapId:string,showRegionPreview:boolean,showCountryPreview:boolean,desktopSide:'left'|'right',switchToBottomMaxWHRatio:number}} Normalized preview config.
  */
 function resolvePreviewConfig(adapterConfig) {
   const preview = isPlainObject(adapterConfig?.map?.ui?.preview) ? adapterConfig.map.ui.preview : {};
@@ -211,52 +237,184 @@ function resolvePreviewConfig(adapterConfig) {
   };
 }
 
-/* ============================================================
-   3) PUBLIC API
-   ============================================================ */
+/* PUBLIC API */
 
 /**
- * Create one adapter instance for one Core instance.
+ * Create one isolated adapter instance per Core instance.
  *
- * @param {{adapterKey?: string, mapId?: string, el?: HTMLElement|null}} [_context]
- * @returns {{init: Function, onResize: Function, destroy: Function}}
+ * @param {{adapterKey?: string, mapId?: string, el?: HTMLElement|null}} [_context] Adapter factory context.
+ * @returns {{init: Function, onResize: Function, destroy: Function}} Adapter lifecycle API.
  */
 export function createAdapter(_context = {}) {
   const mapId = String(_context?.mapId || '').trim();
 
   // Per-instance mutable state; never shared across containers.
-  let map = null;
-  let regionLayer = null;
-  let hybridLayer = null;
-  let countryLayer = null;
-  let el = null;
-  let stage = STAGE_WORLD;
-  let activeGroupId = '';
-  let selectedCountryCode = '';
-  let selectedCountryTitle = '';
-  let hoveredCountryCode = '';
-  let hoveredRegionGroupId = '';
-  let activeGroupBounds = null;
-  let worldBounds = null;
-  let groupIndex = null;
-  let countryIndex = null;
-  let countryRuntimeMap = null;
-  let regionRuntimeMap = null;
-  let leafletGeoJsonCtor = null;
-  let layerStyle = defaultStyle;
-  let regionLayerSource = REGION_LAYER_SOURCE_DERIVED_COUNTRY;
-  let regionFocusExcludeByGroup = new Map();
-  let mapClickHandler = null;
-  let transitionController = null;
-  let focusPadding = { ...DEFAULT_FOCUS_PADDING };
-  let preview = null;
-  let previewConfig = { ...DEFAULT_PREVIEW_CONFIG, mapId: mapId || '' };
-  let countryGrouping = null;
+  const state = {
+    el: null,
+    map: {
+      instance: null,
+      worldBounds: null,
+      transitionController: null,
+      geoJsonCtor: null,
+    },
+    layers: {
+      region: null,
+      hybrid: null,
+      country: null,
+      groupIndex: null,
+      countryIndex: null,
+      style: defaultStyle,
+    },
+    stage: {
+      current: STAGE_WORLD,
+      activeGroupId: '',
+      selectedCountryCode: '',
+      selectedCountryTitle: '',
+      hoveredCountryCode: '',
+      hoveredRegionGroupId: '',
+      activeGroupBounds: null,
+    },
+    data: {
+      countryRuntimeMap: null,
+      regionRuntimeMap: null,
+      countryGrouping: null,
+      regionLayerSource: REGION_LAYER_SOURCE_DERIVED_COUNTRY,
+      regionFocusExcludeByGroup: new Map(),
+      focusPadding: { ...DEFAULT_FOCUS_PADDING },
+    },
+    ui: {
+      preview: null,
+      previewConfig: { ...DEFAULT_PREVIEW_CONFIG, mapId: mapId || '' },
+    },
+    handlers: {
+      mapClick: null,
+    },
+  };
+
+  /* STATE HELPERS */
 
   /**
-   * @returns {{top:number,right:number,bottom:number,left:number}}
+   * Reset stage-local interaction state to world defaults.
+   *
+   * @returns {void}
+   */
+  function resetStageState() {
+    state.stage.current = STAGE_WORLD;
+    state.stage.activeGroupId = '';
+    state.stage.selectedCountryCode = '';
+    state.stage.selectedCountryTitle = '';
+    state.stage.hoveredCountryCode = '';
+    state.stage.hoveredRegionGroupId = '';
+    state.stage.activeGroupBounds = null;
+  }
+
+  /**
+   * Reset full adapter instance state after destroy/init handover.
+   *
+   * @returns {void}
+   */
+  function resetAdapterState() {
+    state.el = null;
+
+    state.map.instance = null;
+    state.map.worldBounds = null;
+    state.map.transitionController = null;
+    state.map.geoJsonCtor = null;
+
+    state.layers.region = null;
+    state.layers.hybrid = null;
+    state.layers.country = null;
+    state.layers.groupIndex = null;
+    state.layers.countryIndex = null;
+    state.layers.style = defaultStyle;
+
+    resetStageState();
+
+    state.data.countryRuntimeMap = null;
+    state.data.regionRuntimeMap = null;
+    state.data.countryGrouping = null;
+    state.data.regionLayerSource = REGION_LAYER_SOURCE_DERIVED_COUNTRY;
+    state.data.regionFocusExcludeByGroup = new Map();
+    state.data.focusPadding = { ...DEFAULT_FOCUS_PADDING };
+
+    state.ui.preview = null;
+    state.ui.previewConfig = { ...DEFAULT_PREVIEW_CONFIG, mapId: mapId || '' };
+    state.handlers.mapClick = null;
+  }
+
+  /**
+   * Execute cleanup callback with warn-only failure handling.
+   *
+   * @param {Function} fn Cleanup callback.
+   * @param {string} warningMessage Warning message on failure.
+   * @returns {void}
+   */
+  function safeInvoke(fn, warningMessage) {
+    try {
+      fn();
+    } catch (_) {
+      dwarn(warningMessage);
+    }
+  }
+
+  /**
+   * Remove map background click handler if currently registered.
+   *
+   * @returns {void}
+   */
+  function removeMapClickHandlerIfNeeded() {
+    const map = state.map.instance;
+    const mapClickHandler = state.handlers.mapClick;
+    if (!map || !mapClickHandler || typeof map.off !== 'function') return;
+    map.off('click', mapClickHandler);
+    state.handlers.mapClick = null;
+  }
+
+  /**
+   * Destroy transition controller instance if present.
+   *
+   * @returns {void}
+   */
+  function destroyTransitionControllerIfNeeded() {
+    const controller = state.map.transitionController;
+    if (!controller || typeof controller.destroy !== 'function') return;
+    safeInvoke(() => controller.destroy(), 'Leaflet adapter: transition controller destroy failed.');
+    state.map.transitionController = null;
+  }
+
+  /**
+   * Remove Leaflet map instance from DOM if present.
+   *
+   * @returns {void}
+   */
+  function removeLeafletMapIfNeeded() {
+    const map = state.map.instance;
+    if (!map || typeof map.remove !== 'function') return;
+    safeInvoke(() => map.remove(), 'Leaflet adapter: map.remove failed during destroy.');
+    state.map.instance = null;
+  }
+
+  /**
+   * Destroy preview overlay instance if present.
+   *
+   * @returns {void}
+   */
+  function destroyPreviewIfNeeded() {
+    const preview = state.ui.preview;
+    if (!preview || typeof preview.destroy !== 'function') return;
+    safeInvoke(() => preview.destroy(), 'Leaflet adapter: preview.destroy failed during destroy.');
+    state.ui.preview = null;
+  }
+
+  /* PREVIEW OPS */
+
+  /**
+   * Read current preview panel insets used for bounds padding.
+   *
+   * @returns {{top:number,right:number,bottom:number,left:number}} Insets in px.
    */
   function resolvePreviewInsets() {
+    const preview = state.ui.preview;
     if (!preview || typeof preview.getInsets !== 'function') {
       return { top: 0, right: 0, bottom: 0, left: 0 };
     }
@@ -273,11 +431,125 @@ export function createAdapter(_context = {}) {
   }
 
   /**
-   * @param {'world'|'region'|'country'} stage
-   * @returns {{paddingTopLeft:[number,number],paddingBottomRight:[number,number]}}
+   * Open preview for a specific scope/key or close when disabled.
+   *
+   * @param {{scope:'region'|'country',key:string,titleHint?:string,enabled:boolean,disabledReason:string}} params Preview open parameters.
+   * @returns {boolean} True when preview open request was submitted.
    */
-  function resolveStageBoundsOptions(stage) {
-    const basePadding = Array.isArray(focusPadding?.[stage]) ? focusPadding[stage] : [0, 0];
+  function openScopedPreview({ scope, key, titleHint = '', enabled, disabledReason }) {
+    const preview = state.ui.preview;
+    if (!preview || !enabled) {
+      if (preview) preview.close({ reason: disabledReason, notify: false });
+      return false;
+    }
+
+    const normalizedKey = scope === 'country'
+      ? String(key || '').trim().toUpperCase()
+      : String(key || '').trim();
+    if (!normalizedKey) return false;
+
+    preview.open({
+      scope,
+      key: normalizedKey,
+      titleHint: String(titleHint || normalizedKey),
+    }).catch((err) => {
+      dwarn(`${scope === 'country' ? 'Country' : 'Region'} preview open failed.`, {
+        key: normalizedKey,
+        err,
+      });
+    });
+
+    if (typeof preview.reposition === 'function') preview.reposition();
+    return true;
+  }
+
+  /**
+   * Close preview overlay without triggering stage callback.
+   *
+   * @param {string} reason Internal close reason.
+   * @returns {void}
+   */
+  function closePreview(reason) {
+    const preview = state.ui.preview;
+    if (!preview) return;
+    preview.close({ reason, notify: false });
+  }
+
+  /**
+   * Synchronize preview visibility/content for a target stage.
+   *
+   * @param {{stage:'world'|'region'|'country',groupId?:string,countryCode?:string,titleHint?:string,isPreflight?:boolean}} params Stage preview sync payload.
+   * @returns {void}
+   */
+  function syncPreviewForStage({
+    stage: nextStage,
+    groupId = '',
+    countryCode = '',
+    titleHint = '',
+    isPreflight = false,
+  }) {
+    const reasonPrefix = isPreflight ? 'stage-preflight' : 'stage';
+    if (nextStage === STAGE_WORLD) {
+      closePreview(`${reasonPrefix}-world`);
+      return;
+    }
+
+    if (nextStage === STAGE_REGION) {
+      const targetGroupId = String(groupId || state.stage.activeGroupId || '').trim();
+      const opened = openScopedPreview({
+        scope: 'region',
+        key: targetGroupId,
+        titleHint: String(titleHint || state.data.countryGrouping?.groupLabels?.[targetGroupId] || targetGroupId),
+        enabled: state.ui.previewConfig.showRegionPreview,
+        disabledReason: 'region-preview-disabled',
+      });
+      if (!opened) closePreview(`${reasonPrefix}-region`);
+      return;
+    }
+
+    if (nextStage === STAGE_COUNTRY) {
+      const targetCountryCode = String(countryCode || state.stage.selectedCountryCode || '').trim().toUpperCase();
+      const opened = openScopedPreview({
+        scope: 'country',
+        key: targetCountryCode,
+        titleHint: String(titleHint || state.stage.selectedCountryTitle || targetCountryCode),
+        enabled: state.ui.previewConfig.showCountryPreview,
+        disabledReason: 'country-preview-disabled',
+      });
+      if (!opened) closePreview(`${reasonPrefix}-country`);
+    }
+  }
+
+  /**
+   * Apply preview side-effects after a transition commit.
+   *
+   * @param {'world'|'region'|'country'} nextStage Stage after commit.
+   * @returns {void}
+   */
+  function applyPreviewForStage(nextStage) {
+    syncPreviewForStage({ stage: nextStage, isPreflight: false });
+  }
+
+  /**
+   * Prime preview before movement so bounds include preview insets.
+   *
+   * @param {{stage:'world'|'region'|'country',groupId?:string,countryCode?:string,titleHint?:string}} params Preflight preview payload.
+   * @returns {void}
+   */
+  function preflightPreviewForTransition(params) {
+    syncPreviewForStage({ ...params, isPreflight: true });
+  }
+
+  /* FOCUS OPS */
+
+  /**
+   * Resolve per-stage fitBounds options including preview insets.
+   *
+   * @param {'world'|'region'|'country'} stageName Target stage.
+   * @returns {{paddingTopLeft:[number,number],paddingBottomRight:[number,number]}} Bounds options.
+   */
+  function resolveStageBoundsOptions(stageName) {
+    const basePadding = Array.isArray(state.data.focusPadding?.[stageName]) ? state.data.focusPadding[stageName] : [0, 0];
     const baseX = Math.max(0, Number(basePadding[0] || 0));
     const baseY = Math.max(0, Number(basePadding[1] || 0));
     const insets = resolvePreviewInsets();
@@ -289,78 +561,16 @@ export function createAdapter(_context = {}) {
   }
 
   /**
-   * @param {string} groupId
-   * @param {string} [titleHint]
-   * @returns {boolean}
-   */
-  function openRegionPreview(groupId, titleHint = '') {
-    if (!preview || !previewConfig.showRegionPreview) {
-      if (preview) preview.close({ reason: 'region-preview-disabled', notify: false });
-      return false;
-    }
-
-    const key = String(groupId || '').trim();
-    if (!key) return false;
-
-    preview.open({
-      scope: 'region',
-      key,
-      titleHint: String(titleHint || countryGrouping?.groupLabels?.[key] || key),
-    }).catch((err) => {
-      dwarn('Region preview open failed.', { key, err });
-    });
-
-    if (typeof preview.reposition === 'function') {
-      preview.reposition();
-    }
-    return true;
-  }
-
-  /**
-   * @param {string} countryCode
-   * @param {string} [titleHint]
-   * @returns {boolean}
-   */
-  function openCountryPreview(countryCode, titleHint = '') {
-    if (!preview || !previewConfig.showCountryPreview) {
-      if (preview) preview.close({ reason: 'country-preview-disabled', notify: false });
-      return false;
-    }
-
-    const key = String(countryCode || '').trim().toUpperCase();
-    if (!key) return false;
-
-    preview.open({
-      scope: 'country',
-      key,
-      titleHint: String(titleHint || key),
-    }).catch((err) => {
-      dwarn('Country preview open failed.', { key, err });
-    });
-
-    if (typeof preview.reposition === 'function') {
-      preview.reposition();
-    }
-    return true;
-  }
-
-  /**
-   * @param {string} reason
-   */
-  function closePreview(reason) {
-    if (!preview) return;
-    preview.close({ reason, notify: false });
-  }
-
-  /**
-   * @param {string} groupId
-   * @param {object|null} [fallbackLayer]
-   * @returns {object|null}
+   * Resolve best-fit bounds for a region group.
+   *
+   * @param {string} groupId Region group id.
+   * @param {object|null} [fallbackLayer=null] Fallback Leaflet layer.
+   * @returns {object|null} Leaflet bounds or null.
    */
   function resolveGroupFocusBounds(groupId, fallbackLayer = null) {
     const normalizedGroupId = normalizeGroupId(groupId);
-    const groupLayers = groupIndex?.layersByGroup?.get(normalizedGroupId) || [];
-    const excludedCodes = regionFocusExcludeByGroup.get(normalizedGroupId);
+    const groupLayers = state.layers.groupIndex?.layersByGroup?.get(normalizedGroupId) || [];
+    const excludedCodes = state.data.regionFocusExcludeByGroup.get(normalizedGroupId);
     const layersForFocus = (excludedCodes && excludedCodes.size)
       ? groupLayers.filter((layer) => !excludedCodes.has(getLayerCountryCode(layer)))
       : groupLayers;
@@ -386,15 +596,17 @@ export function createAdapter(_context = {}) {
   }
 
   /**
-   * @param {string} countryCode
-   * @param {object|null} [fallbackLayer]
-   * @returns {object|null}
+   * Resolve best-fit bounds for a country code.
+   *
+   * @param {string} countryCode Country code.
+   * @param {object|null} [fallbackLayer=null] Fallback Leaflet layer.
+   * @returns {object|null} Leaflet bounds or null.
    */
   function resolveCountryFocusBounds(countryCode, fallbackLayer = null) {
     const code = normalizeCountryCode(countryCode);
     if (!code) return null;
 
-    const countryLayers = countryIndex?.layersByCountry?.get(code) || [];
+    const countryLayers = state.layers.countryIndex?.layersByCountry?.get(code) || [];
     const autoBounds = computeFocusBoundsFromLayers(countryLayers);
     if (autoBounds) return autoBounds;
 
@@ -404,81 +616,89 @@ export function createAdapter(_context = {}) {
     return null;
   }
 
+  /* LAYER OPS */
+
   /**
-   * @param {string} groupId
+   * Apply world-stage style highlighting on region layer.
+   *
+   * @param {string} [groupId=''] Hovered/active group id.
+   * @returns {void}
    */
   function applyWorldLayerStyle(groupId = '') {
-    applyWorldLayerStyleHelper(regionLayer, groupId);
+    applyWorldLayerStyleHelper(state.layers.region, groupId);
   }
 
   /**
-   * Apply deterministic styles for hybrid stage layer.
+   * Apply current hybrid stage style based on state fields.
+   *
+   * @returns {void}
    */
   function applyHybridStageStyle() {
     applyHybridStageStyleHelper({
-      hybridLayer,
-      selectedCountryCode,
-      hoveredCountryCode,
-      hoveredRegionGroupId,
-      stage,
+      hybridLayer: state.layers.hybrid,
+      selectedCountryCode: state.stage.selectedCountryCode,
+      hoveredCountryCode: state.stage.hoveredCountryCode,
+      hoveredRegionGroupId: state.stage.hoveredRegionGroupId,
+      stage: state.stage.current,
       countryStageValue: STAGE_COUNTRY,
-      onContractError: (message, meta) => derror(el, message, meta),
+      onContractError: (message, meta) => derror(state.el, message, meta),
     });
   }
 
   /**
-   * @param {string} groupId
-   * @returns {object}
+   * Build one hybrid layer where active group stays country-kind.
+   *
+   * @param {string} groupId Active group id.
+   * @returns {object} Leaflet GeoJSON layer instance.
    */
   function buildHybridLayerForGroup(groupId) {
-    if (!leafletGeoJsonCtor) {
+    if (!state.map.geoJsonCtor) {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak layer assumptions.
       throw new Error('Leaflet adapter: GeoJSON constructor missing while building hybrid layer.');
     }
 
-    if (regionLayerSource !== REGION_LAYER_SOURCE_DERIVED_COUNTRY) {
+    if (state.data.regionLayerSource !== REGION_LAYER_SOURCE_DERIVED_COUNTRY) {
       // ATTENTION: intentional hard-stop for diagnosability; runtime could continue by falling back to derived-country source.
-      throw new Error(
-        `Leaflet adapter: regionLayerSource "${regionLayerSource}" not implemented yet.`
-      );
+      throw new Error(`Leaflet adapter: regionLayerSource "${state.data.regionLayerSource}" not implemented yet.`);
     }
 
     const hybridRuntimeMap = buildHybridRuntimeMapData({
-      countryRuntimeMap,
-      regionRuntimeMap,
+      countryRuntimeMap: state.data.countryRuntimeMap,
+      regionRuntimeMap: state.data.regionRuntimeMap,
       activeGroupId: groupId,
     });
 
-    return new leafletGeoJsonCtor(hybridRuntimeMap, {
-      style: layerStyle,
+    return new state.map.geoJsonCtor(hybridRuntimeMap, {
+      style: state.layers.style,
       interactive: true,
       onEachFeature: (_feature, layer) => {
         bindHybridLayerFeatureEvents({
           layer,
-          map,
+          map: state.map.instance,
           moduleNs: leafletModule,
-          getStage: () => stage,
+          getStage: () => state.stage.current,
           stageRegionValue: STAGE_REGION,
           stageCountryValue: STAGE_COUNTRY,
-          getActiveGroupId: () => activeGroupId,
+          getActiveGroupId: () => state.stage.activeGroupId,
           onHoverCountry: (code) => {
-            hoveredCountryCode = code;
-            hoveredRegionGroupId = '';
+            state.stage.hoveredCountryCode = code;
+            state.stage.hoveredRegionGroupId = '';
             applyHybridStageStyle();
           },
           onHoverRegion: (groupIdForHover) => {
-            hoveredCountryCode = '';
-            hoveredRegionGroupId = groupIdForHover;
+            state.stage.hoveredCountryCode = '';
+            state.stage.hoveredRegionGroupId = groupIdForHover;
             applyHybridStageStyle();
           },
           onHoverLeave: () => {
-            hoveredCountryCode = '';
-            hoveredRegionGroupId = '';
+            state.stage.hoveredCountryCode = '';
+            state.stage.hoveredRegionGroupId = '';
             applyHybridStageStyle();
           },
           onRegionKindClick: ({ groupId: targetGroupId, layer: targetLayer }) => {
             const targetBounds = resolveGroupFocusBounds(targetGroupId, targetLayer);
             if (!targetGroupId || !targetBounds) {
-              derror(el, 'Leaflet adapter: region-kind hybrid click missing group bounds.', {
+              derror(state.el, 'Leaflet adapter: region-kind hybrid click missing group bounds.', {
                 targetGroupId,
               });
               return;
@@ -488,7 +708,7 @@ export function createAdapter(_context = {}) {
           onCountryKindClick: ({ countryCode, groupId: groupIdForCountry, countryName, layer: targetLayer }) => {
             const countryBounds = resolveCountryFocusBounds(countryCode, targetLayer);
             if (!countryCode || !groupIdForCountry || !countryBounds) {
-              derror(el, 'Leaflet adapter: country-kind hybrid click is missing contract fields.', {
+              derror(state.el, 'Leaflet adapter: country-kind hybrid click is missing contract fields.', {
                 countryCode,
                 groupIdForCountry,
               });
@@ -502,529 +722,565 @@ export function createAdapter(_context = {}) {
               reason: 'country-kind-click',
             });
           },
-          onContractError: (message, meta) => derror(el, message, meta),
+          onContractError: (message, meta) => derror(state.el, message, meta),
         });
       },
     });
   }
 
   /**
-   * @param {string} groupId
+   * Mount hybrid layer for active group and unmount world layer.
+   *
+   * @param {string} groupId Active group id.
+   * @returns {void}
    */
   function mountHybridLayer(groupId) {
+    const map = state.map.instance;
     if (!map) return;
 
-    if (hybridLayer && map.hasLayer(hybridLayer)) {
-      map.removeLayer(hybridLayer);
+    if (state.layers.hybrid && map.hasLayer(state.layers.hybrid)) {
+      map.removeLayer(state.layers.hybrid);
     }
 
-    hybridLayer = buildHybridLayerForGroup(groupId);
-    if (regionLayer && map.hasLayer(regionLayer)) {
-      map.removeLayer(regionLayer);
+    state.layers.hybrid = buildHybridLayerForGroup(groupId);
+    if (state.layers.region && map.hasLayer(state.layers.region)) {
+      map.removeLayer(state.layers.region);
     }
-    if (!map.hasLayer(hybridLayer)) {
-      hybridLayer.addTo(map);
+    if (!map.hasLayer(state.layers.hybrid)) {
+      state.layers.hybrid.addTo(map);
     }
     applyHybridStageStyle();
   }
 
-  /**
-   * @param {'world'|'region'|'country'} nextStage
-   */
-  function applyPreviewForStage(nextStage) {
-    if (nextStage === STAGE_WORLD) {
-      closePreview('stage-world');
-      return;
-    }
-
-    if (nextStage === STAGE_REGION) {
-      const previewOpened = openRegionPreview(activeGroupId);
-      if (!previewOpened) closePreview('stage-region');
-      return;
-    }
-
-    if (nextStage === STAGE_COUNTRY) {
-      const previewOpened = openCountryPreview(selectedCountryCode, selectedCountryTitle || selectedCountryCode);
-      if (!previewOpened) closePreview('stage-country');
-    }
-  }
+  /* STAGE OPS */
 
   /**
-   * Prime preview visibility before movement starts so bounds padding
-   * is computed against final overlay insets.
+   * Clear selection + hover signals used for style/highlight.
    *
-   * @param {{
-   *   stage: 'world'|'region'|'country',
-   *   groupId?: string,
-   *   countryCode?: string,
-   *   titleHint?: string,
-   * }} params
+   * @returns {void}
    */
-  function preflightPreviewForTransition({
-    stage: nextStage,
-    groupId = '',
-    countryCode = '',
-    titleHint = '',
-  }) {
-    if (nextStage === STAGE_WORLD) {
-      closePreview('stage-world-preflight');
-      return;
-    }
-
-    if (nextStage === STAGE_REGION) {
-      const opened = openRegionPreview(groupId, titleHint);
-      if (!opened) closePreview('stage-region-preflight');
-      return;
-    }
-
-    if (nextStage === STAGE_COUNTRY) {
-      const opened = openCountryPreview(countryCode, titleHint || countryCode);
-      if (!opened) closePreview('stage-country-preflight');
-    }
+  function clearSelectionAndHover() {
+    state.stage.selectedCountryCode = '';
+    state.stage.selectedCountryTitle = '';
+    state.stage.hoveredCountryCode = '';
+    state.stage.hoveredRegionGroupId = '';
   }
 
   /**
-   * @param {{reason?:string}} [ctx]
+   * Commit world stage visuals, state, and preview.
+   *
+   * @param {{reason?:string}} [_ctx={}] Optional transition metadata.
+   * @returns {void}
    */
   function commitWorldStage(_ctx = {}) {
-    if (!map || !regionLayer) return;
-    if (hybridLayer && map.hasLayer(hybridLayer)) {
-      map.removeLayer(hybridLayer);
+    const map = state.map.instance;
+    if (!map || !state.layers.region) return;
+
+    if (state.layers.hybrid && map.hasLayer(state.layers.hybrid)) {
+      map.removeLayer(state.layers.hybrid);
     }
-    if (!map.hasLayer(regionLayer)) {
-      regionLayer.addTo(map);
+    if (!map.hasLayer(state.layers.region)) {
+      state.layers.region.addTo(map);
     }
-    stage = STAGE_WORLD;
-    activeGroupId = '';
-    activeGroupBounds = null;
-    selectedCountryCode = '';
-    selectedCountryTitle = '';
-    hoveredCountryCode = '';
-    hoveredRegionGroupId = '';
+
+    state.stage.current = STAGE_WORLD;
+    state.stage.activeGroupId = '';
+    state.stage.activeGroupBounds = null;
+    clearSelectionAndHover();
     applyWorldLayerStyle('');
     applyPreviewForStage(STAGE_WORLD);
   }
 
   /**
-   * @param {{groupId:string,targetBounds:object|Array,reason?:string}} params
+   * Commit region stage visuals, state, and preview.
+   *
+   * @param {{groupId:string,targetBounds:object|Array}} params Commit payload.
+   * @returns {void}
    */
   function commitRegionStage({ groupId, targetBounds }) {
     const normalizedGroupId = normalizeGroupId(groupId);
     if (!normalizedGroupId) return;
-    activeGroupId = normalizedGroupId;
-    activeGroupBounds = targetBounds;
-    selectedCountryCode = '';
-    selectedCountryTitle = '';
-    hoveredCountryCode = '';
-    hoveredRegionGroupId = '';
-    stage = STAGE_REGION;
+
+    state.stage.activeGroupId = normalizedGroupId;
+    state.stage.activeGroupBounds = targetBounds;
+    state.stage.current = STAGE_REGION;
+    clearSelectionAndHover();
     mountHybridLayer(normalizedGroupId);
     applyHybridStageStyle();
     applyPreviewForStage(STAGE_REGION);
   }
 
   /**
-   * @param {{
-   *   countryCode:string,
-   *   groupId:string,
-   *   regionBounds:object|Array,
-   *   titleHint?:string,
-   * }} params
+   * Commit country stage visuals, state, and preview.
+   *
+   * @param {{countryCode:string,groupId:string,regionBounds:object|Array,titleHint?:string}} params Commit payload.
+   * @returns {void}
    */
-  function commitCountryStage({
-    countryCode,
-    groupId,
-    regionBounds,
-    titleHint = '',
-  }) {
+  function commitCountryStage({ countryCode, groupId, regionBounds, titleHint = '' }) {
     const normalizedCountryCode = normalizeCountryCode(countryCode);
     const inferredGroupId = normalizeGroupId(groupId);
-    activeGroupId = inferredGroupId;
-    activeGroupBounds = regionBounds;
-    selectedCountryCode = normalizedCountryCode;
-    selectedCountryTitle = String(titleHint || normalizedCountryCode);
-    hoveredCountryCode = '';
-    hoveredRegionGroupId = '';
-    stage = STAGE_COUNTRY;
+
+    state.stage.activeGroupId = inferredGroupId;
+    state.stage.activeGroupBounds = regionBounds;
+    state.stage.selectedCountryCode = normalizedCountryCode;
+    state.stage.selectedCountryTitle = String(titleHint || normalizedCountryCode);
+    state.stage.hoveredCountryCode = '';
+    state.stage.hoveredRegionGroupId = '';
+    state.stage.current = STAGE_COUNTRY;
     mountHybridLayer(inferredGroupId);
     applyHybridStageStyle();
     applyPreviewForStage(STAGE_COUNTRY);
   }
 
   /**
-   * @param {{reason?:string}} [ctx]
+   * Request transition controller to enter world stage.
+   *
+   * @param {{reason?:string}} [ctx={}] Transition metadata.
+   * @returns {void}
    */
   function enterWorldStage(ctx = {}) {
-    if (!transitionController) return;
+    const controller = state.map.transitionController;
+    if (!controller) return;
     preflightPreviewForTransition({ stage: STAGE_WORLD });
-    transitionController.enterWorldStage(ctx);
+    controller.enterWorldStage(ctx);
   }
 
   /**
-   * @param {{groupId:string,bounds?:object|Array|null,reason?:string}} params
+   * Request transition controller to enter region stage.
+   *
+   * @param {{groupId:string,bounds?:object|Array|null,reason?:string}} params Transition payload.
+   * @returns {void}
    */
   function enterRegionStage(params) {
-    if (!transitionController) return;
+    const controller = state.map.transitionController;
+    if (!controller) return;
     const targetGroupId = normalizeGroupId(params?.groupId || '');
     preflightPreviewForTransition({
       stage: STAGE_REGION,
       groupId: targetGroupId,
     });
-    transitionController.enterRegionStage(params);
+    controller.enterRegionStage(params);
   }
 
   /**
-   * @param {{
-   *   countryCode:string,
-   *   groupId?:string,
-   *   bounds?:object|Array|null,
-   *   titleHint?:string,
-   *   reason?:string
-   * }} params
+   * Request transition controller to enter country stage.
+   *
+   * @param {{countryCode:string,groupId?:string,bounds?:object|Array|null,titleHint?:string,reason?:string}} params Transition payload.
+   * @returns {void}
    */
   function enterCountryStage(params) {
-    if (!transitionController) return;
+    const controller = state.map.transitionController;
+    if (!controller) return;
     const targetCountryCode = normalizeCountryCode(params?.countryCode || '');
     preflightPreviewForTransition({
       stage: STAGE_COUNTRY,
       countryCode: targetCountryCode,
       titleHint: String(params?.titleHint || targetCountryCode || ''),
     });
-    transitionController.enterCountryStage(params);
+    controller.enterCountryStage(params);
   }
 
-  return {
-    async init({ el: containerEl, mapData, mapMeta, adapterConfig }) {
-      this.destroy();
+  /* INIT PIPELINE */
 
-      if (!(containerEl instanceof HTMLElement)) {
-        // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak element assumptions.
-        throw new Error('Leaflet adapter: missing/invalid container element (el).');
-      }
+  /**
+   * Validate strict init contract before touching runtime state.
+   *
+   * @param {HTMLElement} containerEl Target map container.
+   * @param {object} mapData Prepared runtime bundle.
+   * @param {object} adapterConfig Adapter configuration payload.
+   * @returns {void}
+   */
+  function validateInitInput(containerEl, mapData, adapterConfig) {
+    if (!(containerEl instanceof HTMLElement)) {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak element assumptions.
+      throw new Error('Leaflet adapter: missing/invalid container element (el).');
+    }
 
-      if (!adapterConfig || typeof adapterConfig !== 'object') {
-        // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak adapter config assumptions.
-        throw new Error('Leaflet adapter: adapterConfig is missing or invalid.');
-      }
+    if (!adapterConfig || typeof adapterConfig !== 'object') {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak adapter config assumptions.
+      throw new Error('Leaflet adapter: adapterConfig is missing or invalid.');
+    }
 
-      if (!hasRuntimeBundleContract(mapData)) {
-        // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak runtime bundle assumptions.
-        throw new Error(
-          'Leaflet adapter: mapData must be a prepared runtime bundle (countryRuntimeMap/regionRuntimeMap/countryGrouping/flags).'
-        );
-      }
+    if (!hasRuntimeBundleContract(mapData)) {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with weak runtime bundle assumptions.
+      throw new Error(
+        'Leaflet adapter: mapData must be a prepared runtime bundle (countryRuntimeMap/regionRuntimeMap/countryGrouping/flags).'
+      );
+    }
+  }
 
-      el = containerEl;
+  /**
+   * Hydrate adapter runtime state from init payloads.
+   *
+   * @param {object} runtimeLayers Prepared runtime bundle.
+   * @param {object} adapterConfig Adapter configuration payload.
+   * @returns {{datasetKey:string,pipelinePreprocessEnabled:boolean,whitelistEnabled:boolean,groupingEnabled:boolean,groupingMode:string,regionLayerEnabled:boolean}} Diagnostic summary.
+   */
+  function hydrateRuntimeContext(runtimeLayers, adapterConfig) {
+    const runtimeFlags = isPlainObject(runtimeLayers?.flags) ? runtimeLayers.flags : {};
 
-      const runtimeLayers = mapData;
-      const runtimeFlags = isPlainObject(runtimeLayers?.flags) ? runtimeLayers.flags : {};
-      const pipelinePreprocessEnabled = normalizeBool(runtimeFlags.preprocessEnabled, true);
-      const regionLayerEnabled = normalizeBool(runtimeFlags.regionLayerEnabled, true);
-      const whitelistEnabled = normalizeBool(runtimeFlags.whitelistEnabled, true);
-      const groupingEnabled = normalizeBool(runtimeFlags.groupingEnabled, true);
-      const groupingMode = String(runtimeFlags.groupingMode || runtimeLayers?.countryGrouping?.mode || 'off');
-      const datasetKey = String(runtimeLayers?.datasetKey || adapterConfig?.map?.datasetKey || 'world-v1').trim() || 'world-v1';
-      regionLayerSource = String(
-        adapterConfig?.map?.regionLayer?.source || REGION_LAYER_SOURCE_DERIVED_COUNTRY
-      ).trim().toLowerCase();
-      if (
-        regionLayerSource !== REGION_LAYER_SOURCE_DERIVED_COUNTRY
-        && regionLayerSource !== REGION_LAYER_SOURCE_EXTERNAL_REGION_MAP
-      ) {
-        regionLayerSource = REGION_LAYER_SOURCE_DERIVED_COUNTRY;
-      }
-      focusPadding = resolveFocusPaddingConfig(adapterConfig);
-      regionFocusExcludeByGroup = resolveRegionFocusExclusions(adapterConfig);
-      previewConfig = resolvePreviewConfig(adapterConfig);
+    state.data.countryGrouping = runtimeLayers.countryGrouping || null;
+    state.data.countryRuntimeMap = runtimeLayers.countryRuntimeMap || null;
+    state.data.regionRuntimeMap = runtimeLayers.regionRuntimeMap || null;
 
-      try {
-        preview = createPreviewOverlay({
-          rootEl: el,
-          config: {
-            ...previewConfig,
-            mapId: previewConfig.mapId || mapId || '',
-          },
-          onClose: ({ reason }) => {
-            if (reason !== 'user-close') return;
+    state.data.regionLayerSource = String(
+      adapterConfig?.map?.regionLayer?.source || REGION_LAYER_SOURCE_DERIVED_COUNTRY
+    ).trim().toLowerCase();
+    if (
+      state.data.regionLayerSource !== REGION_LAYER_SOURCE_DERIVED_COUNTRY
+      && state.data.regionLayerSource !== REGION_LAYER_SOURCE_EXTERNAL_REGION_MAP
+    ) {
+      state.data.regionLayerSource = REGION_LAYER_SOURCE_DERIVED_COUNTRY;
+    }
 
-            // UX rule: close means close the preview flow and return to world stage.
-            enterWorldStage({ reason: 'preview-close' });
-          },
-        });
-      } catch (err) {
-        preview = null;
-        dwarn('Preview overlay creation failed; map continues without preview.', { err });
-      }
+    state.data.focusPadding = resolveFocusPaddingConfig(adapterConfig);
+    state.data.regionFocusExcludeByGroup = resolveRegionFocusExclusions(adapterConfig);
+    state.ui.previewConfig = resolvePreviewConfig(adapterConfig);
 
-      countryGrouping = runtimeLayers.countryGrouping || null;
-      countryRuntimeMap = runtimeLayers.countryRuntimeMap || null;
-      regionRuntimeMap = runtimeLayers.regionRuntimeMap || null;
+    const countryFeatureCount = Array.isArray(state.data.countryRuntimeMap?.features)
+      ? state.data.countryRuntimeMap.features.length
+      : 0;
+    if (!countryFeatureCount) {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with empty fallback map.
+      throw new Error('Leaflet adapter: runtime bundle has no countryRuntimeMap features.');
+    }
 
-      const countryFeatureCount = Array.isArray(countryRuntimeMap?.features) ? countryRuntimeMap.features.length : 0;
-      if (!countryFeatureCount) {
-        // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with empty fallback map.
-        throw new Error('Leaflet adapter: runtime bundle has no countryRuntimeMap features.');
-      }
+    return {
+      datasetKey: String(runtimeLayers?.datasetKey || adapterConfig?.map?.datasetKey || 'world-v1').trim() || 'world-v1',
+      pipelinePreprocessEnabled: normalizeBool(runtimeFlags.preprocessEnabled, true),
+      whitelistEnabled: normalizeBool(runtimeFlags.whitelistEnabled, true),
+      groupingEnabled: normalizeBool(runtimeFlags.groupingEnabled, true),
+      groupingMode: String(runtimeFlags.groupingMode || runtimeLayers?.countryGrouping?.mode || 'off'),
+      regionLayerEnabled: normalizeBool(runtimeFlags.regionLayerEnabled, true),
+    };
+  }
 
-      dlog('Leaflet runtime config.', {
-        mapId: mapId || null,
-        datasetKey,
-        pipelinePreprocessEnabled,
-        whitelistEnabled,
-        groupingEnabled,
-        groupingMode,
-        regionLayerEnabled,
-        regionLayerSource,
-        focusPadding,
-        regionFocusExclusionGroups: regionFocusExcludeByGroup.size,
-        previewConfig,
-      });
+  /**
+   * Create preview overlay instance for this map container.
+   *
+   * @returns {void}
+   */
+  function setupPreview() {
+    try {
+      state.ui.preview = createPreviewOverlay({
+        rootEl: state.el,
+        config: {
+          ...state.ui.previewConfig,
+          mapId: state.ui.previewConfig.mapId || mapId || '',
+        },
+        onClose: ({ reason }) => {
+          if (reason !== 'user-close') return;
 
-      if (!pipelinePreprocessEnabled) {
-        dwarn(
-          'Runtime pipeline passthrough mode active (preprocess.enabled=0); grouping/whitelist/part-rules are ignored for this map instance.'
-        );
-      }
-
-      dlog('Runtime pipeline audit.', {
-        mapId: mapId || null,
-        datasetKey,
-        groupedCountries: runtimeLayers.countryGrouping?.includedCountries?.length || 0,
-        templateCountriesMissingInSource: Array.isArray(runtimeLayers?.countryGrouping?.diagnostics?.templateCountriesMissingInSource)
-          ? runtimeLayers.countryGrouping.diagnostics.templateCountriesMissingInSource.length
-          : 0,
-        countryFeatures: runtimeLayers.countryRuntimeMap?.features?.length || 0,
-        regionFeatures: runtimeLayers.regionRuntimeMap?.features?.length || 0,
-        audit: runtimeLayers.countryAudit,
-      });
-
-      const moduleNs = await loadLeafletModule(adapterConfig);
-      const { MapCtor, GeoJSONCtor } = getStrictConstructors(moduleNs);
-      layerStyle = resolveStyle(adapterConfig.style);
-      leafletGeoJsonCtor = GeoJSONCtor;
-
-      map = new MapCtor(el, resolveMapOptions(adapterConfig));
-      transitionController = createTransitionController({
-        getMap: () => map,
-        resolveStageBoundsOptions,
-        getWorldBounds: () => worldBounds,
-        getActiveGroupId: () => activeGroupId,
-        getCountryGrouping: () => countryGrouping,
-        resolveGroupFocusBounds,
-        resolveCountryFocusBounds,
-        commitWorld: (ctx) => commitWorldStage(ctx),
-        commitRegion: (ctx) => commitRegionStage(ctx),
-        commitCountry: (ctx) => commitCountryStage(ctx),
-        onContractError: (message, meta) => derror(el, message, meta),
-      });
-
-      countryLayer = new GeoJSONCtor(runtimeLayers.countryRuntimeMap, {
-        style: layerStyle,
-        interactive: true,
-      });
-
-      countryIndex = buildCountryLayerIndex(countryLayer);
-
-      if (runtimeLayers.regionRuntimeMap) {
-        regionLayer = new GeoJSONCtor(runtimeLayers.regionRuntimeMap, {
-          style: layerStyle,
-          interactive: true,
-        });
-
-        groupIndex = buildGroupLayerIndex(regionLayer);
-
-        // Bind hover/click per feature for grouped navigation.
-        bindWorldLayerEvents({
-          regionLayer,
-          moduleNs,
-          getStage: () => stage,
-          stageWorldValue: STAGE_WORLD,
-          hasGroup: (groupId) => !!groupIndex?.layersByGroup?.has(groupId),
-          onHoverGroup: (groupId) => {
-            applyWorldLayerStyle(groupId);
-          },
-          onHoverLeave: () => {
-            applyWorldLayerStyle('');
-          },
-          onRegionClick: ({ groupId, layer }) => {
-            const targetBounds = resolveGroupFocusBounds(groupId, layer);
-            if (!groupId || !targetBounds) {
-              derror(el, 'Leaflet adapter: clicked region is missing group bounds.', { groupId });
-              return;
-            }
-
-            const autoGroupBounds = computeFocusBoundsFromLayers(groupIndex?.layersByGroup?.get(groupId) || []);
-            if (!autoGroupBounds) {
-              dwarn('Region focus bounds fallback used (single-layer bounds).', { groupId });
-            }
-
-            enterRegionStage({ groupId, bounds: targetBounds, reason: 'world-region-click' });
-          },
-        });
-      }
-
-      // Start in world stage when a region layer is available.
-      if (regionLayer) {
-        regionLayer.addTo(map);
-        stage = STAGE_WORLD;
-        activeGroupId = '';
-        selectedCountryCode = '';
-        selectedCountryTitle = '';
-        hoveredCountryCode = '';
-        hoveredRegionGroupId = '';
-        worldBounds = fitInitialView(map, regionLayer, adapterConfig.view || null, resolveStageBoundsOptions('world'));
-        applyWorldLayerStyle('');
-        applyPreviewForStage(STAGE_WORLD);
-      } else {
-        // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with country-only mode.
-        dwarn('Region layer disabled or unavailable; falling back to country-only startup.');
-        countryLayer.addTo(map);
-        stage = STAGE_COUNTRY;
-        worldBounds = fitInitialView(map, countryLayer, adapterConfig.view || null, resolveStageBoundsOptions('world'));
-        selectedCountryCode = '';
-        selectedCountryTitle = '';
-        hoveredCountryCode = '';
-        hoveredRegionGroupId = '';
-      }
-
-      // Refit once after first paint so initial bounds use final container size.
-      window.requestAnimationFrame(() => {
-        if (!map || !worldBounds) return;
-        try {
-          map.invalidateSize(false);
-          const worldOptions = resolveStageBoundsOptions('world');
-          map.fitBounds(worldBounds, {
-            paddingTopLeft: worldOptions.paddingTopLeft,
-            paddingBottomRight: worldOptions.paddingBottomRight,
-            animate: false,
-          });
-        } catch (err) {
-          dwarn('Deferred initial fit failed.', { err });
-        }
-      });
-
-      // Background click keeps staged navigation:
-      // country -> region, region -> world.
-      mapClickHandler = () => {
-        if (stage === STAGE_COUNTRY) {
-          const regionKey = String(activeGroupId || '').trim();
-          const targetBounds = activeGroupBounds || resolveGroupFocusBounds(regionKey);
-          if (regionLayer && targetBounds && regionKey) {
-            enterRegionStage({ groupId: regionKey, bounds: targetBounds, reason: 'sea-click-country' });
-            return;
-          }
-          enterWorldStage({ reason: 'sea-click-country-fallback' });
-          return;
-        }
-
-        if (stage === STAGE_REGION) {
-          enterWorldStage({ reason: 'sea-click-region' });
-          return;
-        }
-
-        // World stage sea click is intentionally a no-op.
-      };
-
-      if (typeof map.on === 'function') {
-        map.on('click', mapClickHandler);
-      }
-
-      const initialBounds = summarizeBounds(worldBounds);
-      const initialFit = estimateFitFill(map, initialBounds);
-      const mapSize = (map && typeof map.getSize === 'function') ? map.getSize() : null;
-      dlog('Leaflet map initialized.', {
-        mapId: mapId || null,
-        stage,
-        activeGroupId,
-        selectedCountryCode,
-        regionLayerActive: !!regionLayer && stage === STAGE_WORLD,
-        hybridLayerActive: !!hybridLayer && (stage === STAGE_REGION || stage === STAGE_COUNTRY),
-        containerW: Number(mapSize?.x || 0),
-        containerH: Number(mapSize?.y || 0),
-        initialFocus: {
-          source: String(resolveViewBounds(regionLayer || countryLayer, adapterConfig.view || null)?.source || 'unknown'),
-          bounds: initialBounds,
-          fit: initialFit,
+          // UX rule: close means close the preview flow and return to world stage.
+          enterWorldStage({ reason: 'preview-close' });
         },
       });
+    } catch (err) {
+      state.ui.preview = null;
+      dwarn('Preview overlay creation failed; map continues without preview.', { err });
+    }
+  }
+
+  /**
+   * Create Leaflet map instance and store strict constructors.
+   *
+   * @param {object} adapterConfig Adapter configuration payload.
+   * @returns {Promise<object>} Loaded Leaflet module namespace.
+   */
+  async function setupLeafletMap(adapterConfig) {
+    const moduleNs = await loadLeafletModule(adapterConfig);
+    const { MapCtor, GeoJSONCtor } = getStrictConstructors(moduleNs);
+    state.layers.style = resolveStyle(adapterConfig.style);
+    state.map.geoJsonCtor = GeoJSONCtor;
+    state.map.instance = new MapCtor(state.el, resolveMapOptions(adapterConfig));
+    return moduleNs;
+  }
+
+  /**
+   * Create transition controller and wire commit handlers.
+   *
+   * @returns {void}
+   */
+  function setupTransitionController() {
+    state.map.transitionController = createTransitionController({
+      getMap: () => state.map.instance,
+      resolveStageBoundsOptions,
+      getWorldBounds: () => state.map.worldBounds,
+      getActiveGroupId: () => state.stage.activeGroupId,
+      getCountryGrouping: () => state.data.countryGrouping,
+      resolveGroupFocusBounds,
+      resolveCountryFocusBounds,
+      commitWorld: (ctx) => commitWorldStage(ctx),
+      commitRegion: (ctx) => commitRegionStage(ctx),
+      commitCountry: (ctx) => commitCountryStage(ctx),
+      onContractError: (message, meta) => derror(state.el, message, meta),
+    });
+  }
+
+  /**
+   * Build runtime layers and indexes from prepared map bundle.
+   *
+   * @param {object} runtimeLayers Prepared runtime bundle.
+   * @param {object} moduleNs Leaflet module namespace.
+   * @returns {void}
+   */
+  function setupLayersAndIndexes(runtimeLayers, moduleNs) {
+    const GeoJSONCtor = state.map.geoJsonCtor;
+    state.layers.country = new GeoJSONCtor(runtimeLayers.countryRuntimeMap, {
+      style: state.layers.style,
+      interactive: true,
+    });
+
+    state.layers.countryIndex = buildCountryLayerIndex(state.layers.country);
+
+    if (!runtimeLayers.regionRuntimeMap) return;
+
+    state.layers.region = new GeoJSONCtor(runtimeLayers.regionRuntimeMap, {
+      style: state.layers.style,
+      interactive: true,
+    });
+
+    state.layers.groupIndex = buildGroupLayerIndex(state.layers.region);
+
+    // Bind hover/click per feature for grouped navigation.
+    bindWorldLayerEvents({
+      regionLayer: state.layers.region,
+      moduleNs,
+      getStage: () => state.stage.current,
+      stageWorldValue: STAGE_WORLD,
+      hasGroup: (groupId) => !!state.layers.groupIndex?.layersByGroup?.has(groupId),
+      onHoverGroup: (groupId) => {
+        applyWorldLayerStyle(groupId);
+      },
+      onHoverLeave: () => {
+        applyWorldLayerStyle('');
+      },
+      onRegionClick: ({ groupId, layer }) => {
+        const targetBounds = resolveGroupFocusBounds(groupId, layer);
+        if (!groupId || !targetBounds) {
+          derror(state.el, 'Leaflet adapter: clicked region is missing group bounds.', { groupId });
+          return;
+        }
+
+        const autoGroupBounds = computeFocusBoundsFromLayers(state.layers.groupIndex?.layersByGroup?.get(groupId) || []);
+        if (!autoGroupBounds) {
+          dwarn('Region focus bounds fallback used (single-layer bounds).', { groupId });
+        }
+
+        enterRegionStage({ groupId, bounds: targetBounds, reason: 'world-region-click' });
+      },
+    });
+  }
+
+  /**
+   * Mount initial stage and compute world bounds.
+   *
+   * @param {object} adapterConfig Adapter configuration payload.
+   * @returns {void}
+   */
+  function mountInitialStage(adapterConfig) {
+    const map = state.map.instance;
+    if (!map) return;
+
+    // Start in world stage when a region layer is available.
+    if (state.layers.region) {
+      state.layers.region.addTo(map);
+      resetStageState();
+      state.map.worldBounds = fitInitialView(
+        map,
+        state.layers.region,
+        adapterConfig.view || null,
+        resolveStageBoundsOptions('world')
+      );
+      applyWorldLayerStyle('');
+      applyPreviewForStage(STAGE_WORLD);
+    } else {
+      // ATTENTION: intentional hard-stop for diagnosability; runtime could continue with country-only mode.
+      dwarn('Region layer disabled or unavailable; falling back to country-only startup.');
+      state.layers.country.addTo(map);
+      state.stage.current = STAGE_COUNTRY;
+      state.stage.activeGroupId = '';
+      state.stage.activeGroupBounds = null;
+      clearSelectionAndHover();
+      state.map.worldBounds = fitInitialView(
+        map,
+        state.layers.country,
+        adapterConfig.view || null,
+        resolveStageBoundsOptions('world')
+      );
+    }
+
+    // Refit once after first paint so initial bounds use final container size.
+    window.requestAnimationFrame(() => {
+      if (!state.map.instance || !state.map.worldBounds) return;
+      try {
+        state.map.instance.invalidateSize(false);
+        const worldOptions = resolveStageBoundsOptions('world');
+        state.map.instance.fitBounds(state.map.worldBounds, {
+          paddingTopLeft: worldOptions.paddingTopLeft,
+          paddingBottomRight: worldOptions.paddingBottomRight,
+          animate: false,
+        });
+      } catch (err) {
+        dwarn('Deferred initial fit failed.', { err });
+      }
+    });
+  }
+
+  /**
+   * Bind map background click behavior (sea-click routing).
+   *
+   * @returns {void}
+   */
+  function bindBackgroundInteractions() {
+    state.handlers.mapClick = () => {
+      if (state.stage.current === STAGE_COUNTRY) {
+        const regionKey = String(state.stage.activeGroupId || '').trim();
+        const targetBounds = state.stage.activeGroupBounds || resolveGroupFocusBounds(regionKey);
+        if (state.layers.region && targetBounds && regionKey) {
+          enterRegionStage({ groupId: regionKey, bounds: targetBounds, reason: 'sea-click-country' });
+          return;
+        }
+        enterWorldStage({ reason: 'sea-click-country-fallback' });
+        return;
+      }
+
+      if (state.stage.current === STAGE_REGION) {
+        enterWorldStage({ reason: 'sea-click-region' });
+        return;
+      }
+
+      // World stage sea click is intentionally a no-op.
+    };
+
+    if (typeof state.map.instance?.on === 'function') {
+      state.map.instance.on('click', state.handlers.mapClick);
+    }
+  }
+
+  /**
+   * Emit startup diagnostics for config, audit, and initial focus.
+   *
+   * @param {object} runtimeLayers Prepared runtime bundle.
+   * @param {{datasetKey:string,pipelinePreprocessEnabled:boolean,whitelistEnabled:boolean,groupingEnabled:boolean,groupingMode:string,regionLayerEnabled:boolean,view?:object|null}} diagnostics Diagnostic values.
+   * @returns {void}
+   */
+  function emitInitDiagnostics(runtimeLayers, diagnostics) {
+    dlog('Leaflet runtime config.', {
+      mapId: mapId || null,
+      datasetKey: diagnostics.datasetKey,
+      pipelinePreprocessEnabled: diagnostics.pipelinePreprocessEnabled,
+      whitelistEnabled: diagnostics.whitelistEnabled,
+      groupingEnabled: diagnostics.groupingEnabled,
+      groupingMode: diagnostics.groupingMode,
+      regionLayerEnabled: diagnostics.regionLayerEnabled,
+      regionLayerSource: state.data.regionLayerSource,
+      focusPadding: state.data.focusPadding,
+      regionFocusExclusionGroups: state.data.regionFocusExcludeByGroup.size,
+      previewConfig: state.ui.previewConfig,
+    });
+
+    if (!diagnostics.pipelinePreprocessEnabled) {
+      dwarn(
+        'Runtime preprocessor passthrough mode active (preprocess.enabled=0); grouping/whitelist/part-rules are ignored for this map instance.'
+      );
+    }
+
+    dlog('Runtime preprocessor audit.', {
+      mapId: mapId || null,
+      datasetKey: diagnostics.datasetKey,
+      groupedCountries: runtimeLayers.countryGrouping?.includedCountries?.length || 0,
+      templateCountriesMissingInSource: Array.isArray(runtimeLayers?.countryGrouping?.diagnostics?.templateCountriesMissingInSource)
+        ? runtimeLayers.countryGrouping.diagnostics.templateCountriesMissingInSource.length
+        : 0,
+      countryFeatures: runtimeLayers.countryRuntimeMap?.features?.length || 0,
+      regionFeatures: runtimeLayers.regionRuntimeMap?.features?.length || 0,
+      audit: runtimeLayers.countryAudit,
+    });
+
+    const initialBounds = summarizeBounds(state.map.worldBounds);
+    const initialFit = estimateFitFill(state.map.instance, initialBounds);
+    const mapSize = (state.map.instance && typeof state.map.instance.getSize === 'function')
+      ? state.map.instance.getSize()
+      : null;
+    dlog('Leaflet map initialized.', {
+      mapId: mapId || null,
+      stage: state.stage.current,
+      activeGroupId: state.stage.activeGroupId,
+      selectedCountryCode: state.stage.selectedCountryCode,
+      regionLayerActive: !!state.layers.region && state.stage.current === STAGE_WORLD,
+      hybridLayerActive: !!state.layers.hybrid && (state.stage.current === STAGE_REGION || state.stage.current === STAGE_COUNTRY),
+      containerW: Number(mapSize?.x || 0),
+      containerH: Number(mapSize?.y || 0),
+      initialFocus: {
+        source: String(resolveViewBounds(state.layers.region || state.layers.country, diagnostics.view || null)?.source || 'unknown'),
+        bounds: initialBounds,
+        fit: initialFit,
+      },
+    });
+  }
+
+  /* INSTANCE API */
+
+  return {
+    /**
+     * Initialize adapter instance for one map container.
+     *
+     * @param {{el: HTMLElement, mapData: object, mapMeta?: object, adapterConfig: object}} params Core init payload.
+     * @returns {Promise<void>}
+     */
+    async init({ el: containerEl, mapData, mapMeta, adapterConfig }) {
+      this.destroy();
+      validateInitInput(containerEl, mapData, adapterConfig);
+      state.el = containerEl;
+
+      const runtimeLayers = mapData;
+      const diagnostics = hydrateRuntimeContext(runtimeLayers, adapterConfig);
+      diagnostics.view = adapterConfig?.view || null;
+      setupPreview();
+      const moduleNs = await setupLeafletMap(adapterConfig);
+      setupTransitionController();
+      setupLayersAndIndexes(runtimeLayers, moduleNs);
+      mountInitialStage(adapterConfig);
+      bindBackgroundInteractions();
+      emitInitDiagnostics(runtimeLayers, diagnostics);
     },
 
+    /**
+     * Keep Leaflet and preview layout in sync after container resize.
+     *
+     * @param {string} _activeRegionId Unused, kept for adapter contract compatibility.
+     * @returns {void}
+     */
     onResize(_activeRegionId) {
+      const map = state.map.instance;
       if (!map) return;
 
       if (typeof map.invalidateSize === 'function') {
         map.invalidateSize(false);
       }
 
-      if (preview && typeof preview.reposition === 'function') {
-        preview.reposition();
+      if (state.ui.preview && typeof state.ui.preview.reposition === 'function') {
+        state.ui.preview.reposition();
       }
     },
 
+    /**
+     * Destroy adapter instance and release all runtime resources.
+     *
+     * @returns {void}
+     */
     destroy() {
-      if (map) {
-        if (mapClickHandler && typeof map.off === 'function') {
-          map.off('click', mapClickHandler);
-        }
-      }
-
-      if (transitionController && typeof transitionController.destroy === 'function') {
-        try {
-          transitionController.destroy();
-        } catch (_) {
-          dwarn('Leaflet adapter: transition controller destroy failed.');
-        }
-      }
-
-      if (map && typeof map.remove === 'function') {
-        try {
-          map.remove();
-        } catch (_) {
-          dwarn('Leaflet adapter: map.remove failed during destroy.');
-        }
-      }
-
-      if (preview && typeof preview.destroy === 'function') {
-        try {
-          preview.destroy();
-        } catch (_) {
-          dwarn('Leaflet adapter: preview.destroy failed during destroy.');
-        }
-      }
-
-      map = null;
-      regionLayer = null;
-      hybridLayer = null;
-      countryLayer = null;
-      el = null;
-      stage = STAGE_WORLD;
-      activeGroupId = '';
-      activeGroupBounds = null;
-      selectedCountryCode = '';
-      selectedCountryTitle = '';
-      hoveredCountryCode = '';
-      hoveredRegionGroupId = '';
-      worldBounds = null;
-      groupIndex = null;
-      countryIndex = null;
-      countryRuntimeMap = null;
-      regionRuntimeMap = null;
-      leafletGeoJsonCtor = null;
-      layerStyle = defaultStyle;
-      regionLayerSource = REGION_LAYER_SOURCE_DERIVED_COUNTRY;
-      regionFocusExcludeByGroup = new Map();
-      mapClickHandler = null;
-      transitionController = null;
-      focusPadding = { ...DEFAULT_FOCUS_PADDING };
-      preview = null;
-      previewConfig = { ...DEFAULT_PREVIEW_CONFIG, mapId: mapId || '' };
-      countryGrouping = null;
+      removeMapClickHandlerIfNeeded();
+      destroyTransitionControllerIfNeeded();
+      removeLeafletMapIfNeeded();
+      destroyPreviewIfNeeded();
+      dlog('Leaflet adapter destroyed.', { mapId: mapId || null });
+      resetAdapterState();
     },
   };
 }
 
-/* ============================================================
-   4) AUTO-RUN
-   ============================================================ */
+/* AUTO-RUN */
 
 // No autorun registration; adapter factory imports this module on demand.

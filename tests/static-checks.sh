@@ -8,11 +8,17 @@ echo "[static] JS syntax checks..."
 node --check assets/js/atlas-adapter.js
 node --check assets/js/atlas-boot.js
 node --check assets/js/atlas-core.js
-node --check assets/js/runtime/atlas-map-pipeline.js
+node --check assets/js/runtime/atlas-preprocessor.js
+node --check assets/js/runtime/atlas-preprocessor-whitelist.js
+node --check assets/js/runtime/atlas-preprocessor-grouping.js
+node --check assets/js/runtime/atlas-preprocessor-transform.js
 node --check assets/js/helpers/atlas-cookie-ops.js
 node --check assets/js/ui/atlas-preview-content.js
 node --check assets/js/ui/atlas-preview.js
+node --check assets/js/ui/atlas-preview-dom.js
+node --check assets/js/ui/atlas-preview-placement.js
 node --check assets/adapter/leaflet/atlas-leaflet.js
+node --check assets/adapter/leaflet/atlas-leaflet-transition.js
 node --check assets/shared/tdw-bridge.js
 node --check assets/shared/tdw-logger.js
 

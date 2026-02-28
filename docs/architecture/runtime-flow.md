@@ -1,6 +1,6 @@
 # Runtime Flow
 
-Linear startup chain: `Boot -> Pipeline -> Core -> Adapter`.
+Linear startup chain: `Boot -> Preprocessor -> Core -> Adapter`.
 
 ## Startup Sequence
 
@@ -13,7 +13,7 @@ Linear startup chain: `Boot -> Pipeline -> Core -> Adapter`.
 7. Adapter factory imports concrete adapter module lazily.
 8. Factory returns validated adapter instance.
 9. Boot computes a runtime-bundle cache key from effective map signature (`mapId`, base URL, `geojson`, `datasetKey`, `grouping`, `whitelist`, `preprocess`, `regionLayer`).
-10. Boot fetches `maps.{id}.geojson` only on cache miss and runs the runtime pipeline once per key.
+10. Boot fetches `maps.{id}.geojson` only on cache miss and runs the runtime preprocessor once per key.
 11. Boot builds `mapMeta` from runtime config (`grouping`, `whitelist`, `preprocess`, `regionLayer`).
 12. Boot forwards adapter-facing map config via `adapterConfig.map` (including `focus` + `ui.preview`).
 13. Boot creates core instance and calls `core.init({ adapter, el, mapData, mapMeta, adapterConfig })` where `mapData` is the prepared runtime bundle.
