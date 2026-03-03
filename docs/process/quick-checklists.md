@@ -21,6 +21,10 @@ Use this page as the fastest pre-flight check.
 6. Update affected docs (contracts, architecture, ADR, version refs) if behavior/process changed.
 7. Mark local test status clearly: `implemented`, `partially tested`, or `done tested`.
 8. Manual interface testing (human-owned) completed for UI/UX changes.
+9. Security baseline checks for this PR are explicit:
+   - no new public write route
+   - strict REST schema validation (negative `400` tests)
+   - no dynamic path execution from request/DB fields
 
 ## Before Merge (Human Trigger)
 
@@ -37,3 +41,6 @@ Use this page as the fastest pre-flight check.
 7. Merge strategy is respected:
    - code PR: human-approved squash merge (`1 PR = 1 commit`)
    - docs-only PR: may use AI-moderated auto-merge when policy conditions are met
+8. Security gate acknowledged by reviewer:
+   - public API remains read-only
+   - admin-write gate requirements unchanged (`#14`: capability + nonce + strict schema)

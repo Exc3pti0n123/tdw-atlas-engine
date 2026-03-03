@@ -22,6 +22,10 @@
 2. docs update checklist passes
 3. required context capsule exists when applicable
 4. interface testing confirmation from human reviewer when UI/UX is touched
+5. security baseline gate passes:
+   - no new public write route
+   - strict schema validation evidence for changed REST input
+   - no dynamic path execution introduced
 
 ## Checklist Enforcement (Current)
 

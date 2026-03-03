@@ -11,6 +11,17 @@ config_tmp="$(mktemp)"
 preview_tmp="$(mktemp)"
 trap 'rm -f "$page_tmp" "$config_tmp" "$preview_tmp"' EXIT
 
+assert_http_400() {
+  local url="$1"
+  local label="$2"
+  local status
+  status="$(curl -ksS -o "$preview_tmp" -w '%{http_code}' "$url")"
+  if [[ "$status" != "400" ]]; then
+    echo "[http] FAIL: expected 400 for ${label}, got ${status}."
+    exit 1
+  fi
+}
+
 echo "[http] GET ${BASE_URL}${PAGE_PATH}"
 curl -kfsS "${BASE_URL}${PAGE_PATH}" >"$page_tmp"
 
@@ -110,5 +121,12 @@ if (json.scope !== 'country' || json.key !== 'DE') {
 
 console.log('[http] /preview payload OK');
 NODE
+
+echo "[http] Negative schema checks (expect 400)"
+assert_http_400 "${BASE_URL}/wp-json/tdw-atlas/v1/config?map_ids=${MAP_ID},../../etc/passwd" "config map_ids path traversal"
+assert_http_400 "${BASE_URL}/wp-json/tdw-atlas/v1/config?map_ids=${MAP_ID},%3Cscript%3E" "config map_ids script payload"
+assert_http_400 "${BASE_URL}/wp-json/tdw-atlas/v1/preview?map_id=${MAP_ID}&scope=country" "preview missing key"
+assert_http_400 "${BASE_URL}/wp-json/tdw-atlas/v1/preview?map_id=${MAP_ID}&scope=country&key=de" "preview country lowercase key"
+assert_http_400 "${BASE_URL}/wp-json/tdw-atlas/v1/preview?map_id=${MAP_ID}&scope=region&key=../x" "preview invalid region key"
 
 echo "[http] OK"

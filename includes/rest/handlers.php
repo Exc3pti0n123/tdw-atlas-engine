@@ -9,77 +9,61 @@ function tdw_atlas_rest_config_handler($request) {
     : '';
 
   if ($raw_map_ids !== '') {
-    $requested_map_keys = array_values(array_filter(array_map('sanitize_key', explode(',', $raw_map_ids)), function ($value) {
-      return is_string($value) && $value !== '';
-    }));
+    $requested_map_keys = tdw_atlas_rest_parse_map_ids($raw_map_ids);
+    if (is_wp_error($requested_map_keys)) {
+      return tdw_atlas_rest_error_response($requested_map_keys, 400);
+    }
   }
 
   $config = tdw_atlas_get_effective_config($requested_map_keys);
   if (is_wp_error($config)) {
-    $error_data = $config->get_error_data();
-    $status = is_array($error_data) ? (int) ($error_data['status'] ?? 500) : 500;
-    return new WP_REST_Response(array(
-      'code' => $config->get_error_code(),
-      'message' => $config->get_error_message(),
-    ), $status > 0 ? $status : 500);
+    return tdw_atlas_rest_error_response($config, 500);
   }
 
   return new WP_REST_Response($config, 200);
 }
 
 function tdw_atlas_rest_preview_handler($request) {
-  $map_id = $request instanceof WP_REST_Request
-    ? sanitize_key((string) ($request->get_param('map_id') ?? ''))
+  $raw_map_id = $request instanceof WP_REST_Request
+    ? (string) ($request->get_param('map_id') ?? '')
     : '';
-  $scope = $request instanceof WP_REST_Request
-    ? strtolower(trim((string) ($request->get_param('scope') ?? '')))
+  $raw_scope = $request instanceof WP_REST_Request
+    ? (string) ($request->get_param('scope') ?? '')
     : '';
-  $key = $request instanceof WP_REST_Request
-    ? trim((string) ($request->get_param('key') ?? ''))
+  $raw_key = $request instanceof WP_REST_Request
+    ? (string) ($request->get_param('key') ?? '')
     : '';
 
-  if ($map_id === '') {
-    return tdw_atlas_rest_bad_request(
-      'tdw_atlas_preview_map_id_required',
-      'Missing required query param: map_id'
-    );
+  if (trim($raw_map_id) === '') {
+    return tdw_atlas_rest_bad_request('tdw_atlas_preview_map_id_required', 'Missing required query param: map_id');
+  }
+  if (trim($raw_scope) === '') {
+    return tdw_atlas_rest_bad_request('tdw_atlas_preview_scope_required', 'Missing required query param: scope');
+  }
+  if (trim($raw_key) === '') {
+    return tdw_atlas_rest_bad_request('tdw_atlas_preview_key_required', 'Missing required query param: key');
   }
 
-  if ($scope !== 'region' && $scope !== 'country') {
-    return tdw_atlas_rest_bad_request(
-      'tdw_atlas_preview_scope_invalid',
-      'Invalid scope. Expected: region or country'
-    );
+  $map_id = tdw_atlas_rest_validate_map_id($raw_map_id, 'map_id');
+  if (is_wp_error($map_id)) {
+    return tdw_atlas_rest_error_response($map_id, 400);
   }
 
-  if ($key === '') {
-    return tdw_atlas_rest_bad_request(
-      'tdw_atlas_preview_key_required',
-      'Missing required query param: key'
-    );
+  $scope = tdw_atlas_rest_validate_scope($raw_scope);
+  if (is_wp_error($scope)) {
+    return tdw_atlas_rest_error_response($scope, 400);
   }
 
-  if ($scope === 'country') {
-    $key = strtoupper($key);
-  } else {
-    $key = sanitize_key($key);
-  }
-
-  if ($key === '') {
-    return tdw_atlas_rest_bad_request(
-      'tdw_atlas_preview_key_invalid',
-      'Invalid key value for selected scope'
-    );
+  $key = $scope === 'country'
+    ? tdw_atlas_rest_validate_country_code($raw_key)
+    : tdw_atlas_rest_validate_region_key($raw_key);
+  if (is_wp_error($key)) {
+    return tdw_atlas_rest_error_response($key, 400);
   }
 
   $payload = tdw_atlas_rest_preview_payload($map_id, $scope, $key);
   if (is_wp_error($payload)) {
-    $error_data = $payload->get_error_data();
-    $status = is_array($error_data) ? (int) ($error_data['status'] ?? 500) : 500;
-    return new WP_REST_Response(array(
-      'code' => $payload->get_error_code(),
-      'message' => $payload->get_error_message(),
-    ), $status > 0 ? $status : 500);
+    return tdw_atlas_rest_error_response($payload, 500);
   }
 
   return new WP_REST_Response($payload, 200);

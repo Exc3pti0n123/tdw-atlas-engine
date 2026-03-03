@@ -25,6 +25,39 @@ function tdw_atlas_db_normalize_map_key($value) {
   return sanitize_key((string) $value);
 }
 
+function tdw_atlas_db_is_safe_plugin_relative_path($candidate, $allowed_exts = array()) {
+  $path = trim((string) $candidate);
+  if ($path === '') return false;
+
+  if (strpos($path, '\\') !== false) return false;
+  if (strpos($path, '..') !== false) return false;
+  if (strpos($path, '://') !== false) return false;
+  if (strncmp($path, '//', 2) === 0) return false;
+  if ($path[0] === '/' || $path[0] === '.') return false;
+  if (preg_match('/[\x00-\x1F\x7F]/', $path) === 1) return false;
+  if (preg_match('/^[A-Za-z0-9._\\/-]+$/', $path) !== 1) return false;
+
+  if (is_array($allowed_exts) && $allowed_exts) {
+    $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+    $allowed = array_map(static function ($item) {
+      return strtolower(trim((string) $item));
+    }, $allowed_exts);
+    if ($ext === '' || !in_array($ext, $allowed, true)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function tdw_atlas_db_resolve_plugin_data_path($relative_path, $allowed_exts = array()) {
+  $candidate = trim((string) $relative_path);
+  if (!tdw_atlas_db_is_safe_plugin_relative_path($candidate, $allowed_exts)) {
+    throw new RuntimeException('Invalid plugin-relative path: ' . $candidate);
+  }
+  return plugin_dir_path(TDW_ATLAS_PLUGIN_FILE) . $candidate;
+}
+
 function tdw_atlas_db_normalize_dataset_key($value, $fallback = 'world-v1') {
   $key = sanitize_key((string) $value);
   if ($key === '') $key = sanitize_key((string) $fallback);

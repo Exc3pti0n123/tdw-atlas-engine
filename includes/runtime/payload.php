@@ -8,6 +8,9 @@ function tdw_atlas_get_db_settings_or_default($defaults) {
 
   $debug = isset($candidate['debug']) ? (bool) $candidate['debug'] : (bool) ($defaults['debug'] ?? false);
   $vendor = tdw_atlas_normalize_vendor($candidate['vendor'] ?? array(), $defaults['vendor'] ?? array());
+  if (is_wp_error($vendor)) {
+    return $vendor;
+  }
   $views = isset($candidate['views']) && is_array($candidate['views']) ? $candidate['views'] : ($defaults['views'] ?? array());
 
   return array(
@@ -336,6 +339,7 @@ function tdw_atlas_get_db_maps_or_error($defaults, $requested_map_keys = array()
 
   $rows = $params
     ? $wpdb->get_results($wpdb->prepare($sql, ...$params), ARRAY_A)
+    // static query, no external input
     : $wpdb->get_results($sql, ARRAY_A);
 
   if (!empty($wpdb->last_error)) {
@@ -352,8 +356,21 @@ function tdw_atlas_get_db_maps_or_error($defaults, $requested_map_keys = array()
   $maps = array();
 
   foreach ($rows as $row) {
-    $map_key = sanitize_key((string) ($row['map_key'] ?? ''));
-    $geojson_path = trim((string) ($row['geojson_path'] ?? ''));
+    $raw_map_key = trim((string) ($row['map_key'] ?? ''));
+    if (preg_match('/^[a-z0-9_-]{1,64}$/', $raw_map_key) !== 1) {
+      return new WP_Error('tdw_atlas_map_key_invalid', 'Invalid map key detected in atlas maps table.', array('status' => 500));
+    }
+    $map_key = $raw_map_key;
+
+    $geojson_path = tdw_atlas_validate_plugin_relative_path_or_error(
+      $row['geojson_path'] ?? '',
+      'maps.' . $map_key . '.geojson',
+      array('json')
+    );
+    if (is_wp_error($geojson_path)) {
+      return $geojson_path;
+    }
+
     $dataset_key = sanitize_key((string) ($row['dataset_key'] ?? ''));
 
     if ($map_key === '' || $geojson_path === '' || $dataset_key === '') {
@@ -424,6 +441,9 @@ function tdw_atlas_get_effective_config($requested_map_keys = array()) {
   }
 
   $settings = tdw_atlas_get_db_settings_or_default($defaults);
+  if (is_wp_error($settings)) {
+    return $settings;
+  }
   $maps = tdw_atlas_get_db_maps_or_error($defaults['maps'] ?? array(), $requested_map_keys);
 
   if (is_wp_error($maps)) {

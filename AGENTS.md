@@ -94,3 +94,13 @@ For implementation changes run and report:
 2. `npm run test:non-ui`
 
 Human remains owner of UI/UX acceptance testing.
+
+## 9) Security Baseline Duty (mandatory)
+
+All agents must enforce the minimal 5-rule baseline:
+
+1. Public Atlas REST routes stay read-only.
+2. Admin write operations (when added) must require capability + nonce + strict schema.
+3. No dynamic execution/path resolution from request or DB-controlled values.
+4. Fail-closed for invalid security-relevant input (no sanitize-and-continue).
+5. SQL with variable input must use prepared statements.

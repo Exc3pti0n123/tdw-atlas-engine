@@ -36,6 +36,12 @@ This is the top-level architecture document for TDW Atlas Engine.
 3. Architecture decision record:
 - `docs/adr/`
 
+## Security Baseline (v0.2.0)
+
+1. Public REST surface is read-only.
+2. Request/DB inputs are validated fail-closed before runtime payload emission.
+3. Runtime/seed file paths are restricted to safe plugin-local paths.
+
 ## Deep-Dive Docs
 
 - `architecture/runtime-flow.md`

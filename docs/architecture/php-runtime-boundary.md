@@ -36,3 +36,16 @@
 
 - PHP does not execute runtime rendering decisions for map behavior.
 - JS runtime owns orchestration and renderer interactions.
+
+## Trust Boundaries
+
+1. Request input is untrusted and must be strictly validated at REST handlers.
+2. DB values are treated as runtime input and are validated before payload emission.
+3. Seed file values are bootstrap input and are validated before reseed import.
+
+## Fail-Closed Security Flow
+
+1. Invalid REST query input returns `400` (no sanitize-and-continue).
+2. Invalid runtime config rows (paths/vendor/grouping contracts) return `500` and abort payload generation.
+3. Invalid seed paths/contracts throw and abort reseed.
+4. Public Atlas REST surface remains read-only (`/config`, `/preview`).

@@ -132,8 +132,11 @@ Notes:
 - `debug` is the single authoritative source for whether debug should be enabled.
 - Runtime config is served via `/wp-json/tdw-atlas/v1/config` (effective config from DB).
 - Runtime may pass optional query param `map_ids` (comma-separated map keys) to receive only required page-local maps.
+  - strict schema: each map id must match `^[a-z0-9_-]{1,64}$`
+  - invalid `map_ids` input must return `400` (fail-closed; no sanitize-and-continue)
 - `maps.{id}.adapter` is required and selects the concrete adapter module.
-- `maps.{id}.geojson` is typically a relative path inside the plugin; Boot resolves it relative to `meta.baseUrl` (fallback: `data-config-url`).
+- `maps.{id}.geojson` is a strict plugin-relative `.json` path.
+  - forbidden: `..`, protocol prefixes (`http://`, `https://`), protocol-relative (`//`), absolute paths.
 - `maps.{id}.datasetKey` is required and binds runtime map data to DB dataset metadata.
 - `maps.{id}.grouping` is required and controls grouping mode (`set|geojson|off`).
 - `maps.{id}.whitelist` is required and controls include/exclude policy independently of grouping.
@@ -203,6 +206,17 @@ Rules:
    - `COMMIT` only on full success
    - `ROLLBACK` on any failure
 2. API must fail-fast on write errors and never leave partial persisted state.
+
+## Contract 4.2 — Security Baseline (Minimal 5)
+
+1. Public Atlas REST surface is read-only.
+2. Admin write endpoints (future) must enforce:
+   - capability check
+   - nonce validation
+   - strict schema validation
+3. Dynamic execution/path resolution from request or DB-controlled input is forbidden.
+4. Security-relevant invalid input must fail-closed.
+5. SQL with variable input must use prepared statements (`$wpdb->prepare`).
 
 
 ## Contract 5 — Logging & Debugging
@@ -422,6 +436,11 @@ Adapters must implement:
   - `map_id`
   - `scope` (`region|country`)
   - `key`
+- Input schema (strict):
+  - `map_id`: `^[a-z0-9_-]{1,64}$`
+  - `scope`: `region|country`
+  - `key` for country: `^[A-Z]{2}$`
+  - `key` for region: `^[a-z0-9_-]{1,64}$`
 - Missing or invalid params must return HTTP 400.
 - Response shape (placeholder):
   - `mapId`, `scope`, `key`, `title`, `teaser`, `readMoreUrl`, `placeholder`
@@ -439,6 +458,7 @@ Adapters must implement:
 - No reliance on globals like `window.L`.
 - Leaflet integration is strict 2.x (no 1.x constructor/factory fallback).
 - Renderer-specific vendor URL validation is adapter-local (Leaflet adapter path), not Boot-generic.
+- Vendor asset paths must stay plugin-local (`/wp-content/plugins/tdw-atlas-engine/...`) and fail-closed when invalid.
 
 ---
 

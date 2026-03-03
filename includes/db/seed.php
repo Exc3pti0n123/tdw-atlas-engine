@@ -4,12 +4,16 @@ if (!defined('ABSPATH')) exit;
 
 function tdw_atlas_seed_settings_from_defaults($defaults) {
   $defaults = is_array($defaults) ? $defaults : array();
+  $vendor = tdw_atlas_normalize_vendor($defaults['vendor'] ?? array(), $defaults['vendor'] ?? array());
+  if (is_wp_error($vendor)) {
+    throw new RuntimeException('Invalid vendor defaults in atlas.seed.json: ' . $vendor->get_error_message());
+  }
 
   update_option(
     TDW_ATLAS_OPTION_SETTINGS,
     array(
       'debug' => (bool) ($defaults['debug'] ?? false),
-      'vendor' => tdw_atlas_normalize_vendor($defaults['vendor'] ?? array(), $defaults['vendor'] ?? array()),
+      'vendor' => $vendor,
       'views' => is_array($defaults['views'] ?? null) ? $defaults['views'] : array(),
     ),
     false
@@ -27,6 +31,9 @@ function tdw_atlas_db_collect_seed_maps($defaults) {
     $geojson_path = trim((string) ($raw_map['geojson'] ?? ''));
     if ($geojson_path === '') {
       throw new RuntimeException('Map "' . $map_key . '" is missing geojson path in atlas.seed.json.');
+    }
+    if (!tdw_atlas_db_is_safe_plugin_relative_path($geojson_path, array('json'))) {
+      throw new RuntimeException('Map "' . $map_key . '" has invalid geojson path in atlas.seed.json.');
     }
 
     $dataset_key = tdw_atlas_db_normalize_dataset_key($raw_map['datasetKey'] ?? $map_key, $map_key);
@@ -63,6 +70,9 @@ function tdw_atlas_db_collect_seed_maps($defaults) {
     $template_path = trim((string) ($raw_map['groupingTemplate'] ?? ''));
     if ($grouping_mode === 'set' && $template_path === '') {
       throw new RuntimeException('Map "' . $map_key . '" requires groupingTemplate for grouping mode "set".');
+    }
+    if ($grouping_mode === 'set' && !tdw_atlas_db_is_safe_plugin_relative_path($template_path, array('json'))) {
+      throw new RuntimeException('Map "' . $map_key . '" has invalid groupingTemplate path in atlas.seed.json.');
     }
 
     $maps[$map_key] = array(
@@ -161,7 +171,7 @@ function tdw_atlas_db_seed_dataset_from_geojson($dataset_key, $geojson_rel_path)
   $catalog_table = tdw_atlas_table_country_catalog();
   $feature_table = tdw_atlas_table_dataset_features();
 
-  $geojson_abs = plugin_dir_path(TDW_ATLAS_PLUGIN_FILE) . ltrim($geojson_rel_path, '/');
+  $geojson_abs = tdw_atlas_db_resolve_plugin_data_path($geojson_rel_path, array('json'));
   $geojson = tdw_atlas_db_read_json_file($geojson_abs);
   $features = is_array($geojson['features'] ?? null) ? $geojson['features'] : null;
   if (!is_array($features)) {
@@ -273,7 +283,7 @@ function tdw_atlas_db_seed_dataset_from_geojson($dataset_key, $geojson_rel_path)
 }
 
 function tdw_atlas_db_load_grouping_template($template_rel_path) {
-  $abs_path = plugin_dir_path(TDW_ATLAS_PLUGIN_FILE) . ltrim($template_rel_path, '/');
+  $abs_path = tdw_atlas_db_resolve_plugin_data_path($template_rel_path, array('json'));
   $template = tdw_atlas_db_read_json_file($abs_path);
 
   $set = is_array($template['set'] ?? null) ? $template['set'] : array();

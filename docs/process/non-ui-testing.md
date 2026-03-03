@@ -16,6 +16,7 @@ This project uses a split testing ownership model:
    - atlas container + config URL markers exist
    - `/wp-json/tdw-atlas/v1/config` payload contract basics
    - `/wp-json/tdw-atlas/v1/preview` placeholder contract basics
+   - negative schema cases return `400` (`map_ids` injection patterns, invalid preview keys)
 4. Browser console smoke (headless):
    - page loads
    - no JS `pageerror`
@@ -84,3 +85,4 @@ When `TDW_ATLAS_LOCAL_ENV_SCRIPT` is set, `wp-cli-smoke.sh` imports required Loc
 
 1. If `wp` is not in the Codex PATH, wp-cli smoke is skipped unless configured.
 2. Browser-console smoke is intentionally non-visual; it is not a substitute for interface testing.
+3. Security baseline expects explicit negative API assertions in HTTP smoke, not only positive-path checks.

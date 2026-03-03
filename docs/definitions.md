@@ -27,6 +27,11 @@
 - Shared Helper Module:
   - `assets/js/helpers/atlas-shared.js`.
   - Hosts shared normalization helpers used across Boot/Pipeline/Adapter modules.
+- Strict Schema Validation:
+  - Request fields are accepted only when they match contract shape/type/value.
+  - Invalid fields return explicit error (`400`/`500`) instead of sanitize-and-continue.
+- Fail-Closed:
+  - Invalid security-relevant input stops processing immediately and returns explicit error.
 - Core Instance:
   - Instance from `window.TDW.Atlas.Core.create()` for one container.
 - Merge Capsule:

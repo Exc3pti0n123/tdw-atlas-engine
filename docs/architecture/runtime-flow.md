@@ -45,3 +45,5 @@ Linear startup chain: `Boot -> Preprocessor -> Core -> Adapter`.
 - Global page crash is avoided where possible.
 - Error rendering is visible in the affected container.
 - Preview fetch errors are explicitly non-fatal and degrade to placeholder content.
+- REST input schema is strict fail-closed:
+  - malformed `map_ids` / invalid preview query params return `400`.

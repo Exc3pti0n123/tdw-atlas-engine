@@ -90,6 +90,16 @@ node --check assets/shared/tdw-logger.js
 Browser/HTTP smoke details:
 - `docs/process/non-ui-testing.md`
 
+## Security Baseline (Mandatory)
+
+Apply these minimum rules on all Atlas changes:
+
+1. Public REST surface stays read-only.
+2. Admin write paths (when implemented) require capability + nonce + strict schema.
+3. No dynamic path execution from request/DB values.
+4. Fail-closed on invalid input/contracts (no sanitize-and-continue for security fields).
+5. SQL with variable input must use `$wpdb->prepare`.
+
 ## PR Requirements
 
 - issue link in PR description

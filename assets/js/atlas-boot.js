@@ -167,6 +167,7 @@ function collectRequestedMapIds(containers) {
   for (const el of containers) {
     const mapId = String(el?.getAttribute?.('data-map-id') || '').trim();
     if (!mapId) continue;
+    if (!/^[a-z0-9_-]{1,64}$/.test(mapId)) continue;
     ids.add(mapId);
   }
   return Array.from(ids);
