@@ -1,5 +1,8 @@
 # Release Checklist
 
+Related runbook:
+- `release-process.md`
+
 ## Pre-Release
 
 1. Version strings updated where applicable.

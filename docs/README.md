@@ -34,10 +34,11 @@ Use this page as the central navigation hub.
 
 1. `process/merge-strategy.md`
 2. `process/release-checklist.md`
-3. `process/quick-checklists.md`
-4. `process/non-ui-testing.md`
-5. `process/code-health-report-v0.2.0-alpha2.md`
-6. `process/code-health-metrics-v0.2.0-alpha2.json`
+3. `process/release-process.md`
+4. `process/quick-checklists.md`
+5. `process/non-ui-testing.md`
+6. `process/code-health-report-v0.2.0-alpha2.md`
+7. `process/code-health-metrics-v0.2.0-alpha2.json`
 
 ## Decision and Context Tracking
 
