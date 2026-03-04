@@ -13,7 +13,7 @@ This file defines mandatory behavior for AI contributors.
 
 1. `../templates/module-template.md`
 2. `../templates/module-template-custom.md`
-3. `../../assets/shared/tdw-logger.js`
+3. `../../../tdw-core/assets/shared/tdw-logger.js`
 4. `../../assets/js/helpers/atlas-shared.js`
 
 ## Mandatory Responsibilities

@@ -22,7 +22,7 @@
 - Preprocess Profile:
   - Adapter-specific geometry processing policy (e.g. multipolygon strategy).
 - Scoped Logger Helper:
-  - `assets/shared/tdw-logger.js`.
+  - `../tdw-core/assets/shared/tdw-logger.js`.
   - Exposes `window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {}` pattern for standardized `dlog/dwarn/derror`.
 - Shared Helper Module:
   - `assets/js/helpers/atlas-shared.js`.

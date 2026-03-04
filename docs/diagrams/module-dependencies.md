@@ -7,7 +7,7 @@ flowchart TD
   M3 --> M4["tdw-atlas-adapter"]
   M4 --> M5["tdw-atlas-core"]
   M5 --> M6["tdw-atlas-boot"]
-  M6 --> H1["assets/shared/tdw-logger.js"]
+  M6 --> H1["../tdw-core/assets/shared/tdw-logger.js"]
   M6 --> H2["assets/js/helpers/atlas-shared.js"]
   M6 --> P1["assets/js/runtime/atlas-preprocessor.js"]
   P1 --> P2["atlas-preprocessor-whitelist.js"]

@@ -11,13 +11,14 @@
 
 Owner:
 - PHP script-module dependency graph in `tdw-atlas-engine.php`.
+- Shared module registration (`tdw-bridge`, `tdw-logger`) in sibling plugin `../tdw-core/tdw-core.php`.
 
 ## Dynamic Runtime Graph
 
 1. `tdw-atlas-boot` -> imports runtime preprocessor orchestrator (`assets/js/runtime/atlas-preprocessor.js`).
 2. `tdw-atlas-adapter` -> dynamic import of concrete adapter module (`assets/adapter/*`).
 3. shared helper modules (imported by Atlas modules):
-   - `assets/shared/tdw-logger.js`
+   - `../tdw-core/assets/shared/tdw-logger.js`
    - `assets/js/helpers/atlas-shared.js`
 4. runtime preprocessor internals:
    - `assets/js/runtime/atlas-preprocessor-whitelist.js`

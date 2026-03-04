@@ -10,9 +10,13 @@ This is the top-level architecture document for TDW Atlas Engine.
 - runtime config endpoint (`/wp-json/tdw-atlas/v1/config`)
 
 2. Browser/JS side:
-- shared modules (`tdw-bridge`, `tdw-logger`)
+- shared modules from sibling plugin `tdw-core` (`tdw-bridge`, `tdw-logger`)
 - atlas modules (`cookie-ops`, `adapter factory`, `core`, `boot`)
 - concrete renderer adapter modules loaded dynamically (`assets/adapter/*`)
+
+3. Adjacent plugin dependencies:
+- `tdw-core`: required shared runtime contracts (namespace + bridge/logger).
+- `tdw-design`: optional token provider for Atlas CSS.
 
 ## Runtime Model
 

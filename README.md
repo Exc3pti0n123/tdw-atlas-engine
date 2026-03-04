@@ -4,10 +4,11 @@ WordPress plugin for rendering GeoJSON maps via shortcode with a strict ESM runt
 
 ## Quick Start
 
-1. Activate the plugin in WordPress.
-2. Add shortcode to a page:
+1. Activate sibling dependency plugin `tdw-core` in WordPress.
+2. Activate this plugin (`tdw-atlas-engine`) in WordPress.
+3. Add shortcode to a page:
 `[tdw_atlas id="world"]`
-3. Open runtime config endpoint:
+4. Open runtime config endpoint:
 `/wp-json/tdw-atlas/v1/config`
 
 ## Start Here (One-Click Onboarding)

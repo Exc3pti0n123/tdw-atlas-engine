@@ -83,9 +83,9 @@ node --check assets/adapter/leaflet/atlas-leaflet.js
 node --check assets/js/atlas-core.js
 node --check assets/js/atlas-boot.js
 node --check assets/js/helpers/atlas-cookie-ops.js
-node --check assets/shared/tdw-bridge.js
-node --check assets/shared/tdw-logger.js
 ```
+
+Shared modules (`tdw-bridge`, `tdw-logger`) are provided by sibling plugin `tdw-core`.
 
 Browser/HTTP smoke details:
 - `docs/process/non-ui-testing.md`

@@ -77,7 +77,7 @@ if (typeof api.exampleFunction !== 'function') api.exampleFunction = exampleFunc
 - Logger boilerplate is mandatory in this compact form:
   - `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 - Direct `window.TDW._logger.log/warn/error` usage is reserved for:
-  - `assets/shared/tdw-logger.js`
+  - `../tdw-core/assets/shared/tdw-logger.js`
 - If module-level `dlog`/`dwarn` calls exist, ensure PHP module dependencies guarantee logger availability.
 - For a version with explicit custom sections, use:
   - `docs/templates/module-template-custom.md`

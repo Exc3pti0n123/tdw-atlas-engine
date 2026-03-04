@@ -55,7 +55,7 @@ Reason:
 2. fatal errors still surface via `console.error`
 
 Do not replace it with different custom logger wiring in module files.
-Direct `_logger` usage is reserved for `assets/shared/tdw-logger.js`.
+Direct `_logger` usage is reserved for `../tdw-core/assets/shared/tdw-logger.js`.
 
 ## 5) Fail-Fast Rule
 

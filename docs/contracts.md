@@ -7,7 +7,8 @@ If you change a contract, update this file and bump the plugin version.
 
 - **WordPress Runtime (PHP)**: renders shortcodes, serves static assets, decides which scripts/styles are enqueued.
 - **Content Editors (WP Block Editor)**: place `[tdw_atlas]` shortcodes and wrap them in layout groups.
-- **Theme / tdw-site-core**: provides global design tokens (CSS variables) used by Atlas UI.
+- **TDW Design plugin (`tdw-design`)**: provides optional global design tokens (CSS variables) used by Atlas UI.
+- **TDW Core plugin (`tdw-core`)**: provides shared namespace runtime modules (`tdw-bridge`, `tdw-logger`).
 - **TDW Atlas Boot (JS)**: orchestrates loading config + map data and wiring Core + Adapter.
 - **TDW Atlas Adapter Factory (JS)**: resolves configured adapter key to concrete adapter instance.
 - **TDW Atlas Core (JS)**: per-instance state machine; calls adapter methods; no DOM scanning.
@@ -77,7 +78,7 @@ Notes:
 - AUTO-RUN must be the only place that registers event listeners or starts orchestration.
 - Functions in section `2) FUNCTIONS` should use JSDoc (`@param`, `@returns`) for non-trivial behavior.
 - Logger boilerplate is standardized via:
-  - `assets/shared/tdw-logger.js`
+  - `../tdw-core/assets/shared/tdw-logger.js`
   - `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 - Shared normalization helpers are centralized in:
   - `assets/js/helpers/atlas-shared.js`
@@ -256,7 +257,7 @@ For runtime sequencing see Contract 17.
 - Atlas module boilerplate must use:
   - `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 - Direct `window.TDW._logger.log/warn/error` calls are reserved for:
-  - `assets/shared/tdw-logger.js`
+  - `../tdw-core/assets/shared/tdw-logger.js`
 
 Atlas perspective:
 - Atlas consumes the logger as a shared dependency (`tdw-logger`), but does not own logger internals.
@@ -464,7 +465,7 @@ Adapters must implement:
 
 ## Contract 13 — Design Tokens
 
-Atlas CSS must rely on tokens provided by `tdw-site-core`:
+Atlas CSS must rely on tokens provided by `tdw-design` when available:
 - `--tdw-bg`, `--tdw-text`, `--tdw-muted`, `--tdw-water`, `--tdw-border`, etc.
 
 ### Debug helper
@@ -502,7 +503,7 @@ When we add a visible attribution UI, it must support:
 
 ### Shared Bridge
 
-- Shared vendor namespace attachments are provided by `assets/shared/tdw-bridge.js`.
+- Shared vendor namespace attachments are provided by `../tdw-core/assets/shared/tdw-bridge.js`.
 - Current bridge API:
   - `window.TDW.bridge.get(name)` (async)
   - `window.TDW.bridge.getSync(name)` (sync)
@@ -527,6 +528,8 @@ Required dependency graph for predictable logging and runtime:
 Rules:
 
 - For static/startup-critical modules, this PHP dependency graph is the authoritative load order.
+- Atlas plugin header must declare `Requires Plugins: tdw-core`.
+- `tdw-core` is responsible for registering shared modules (`tdw-bridge`, `tdw-logger`) via WordPress script module API before Atlas enqueue.
 - `tdw-atlas-cookie-ops` must run before Adapter/Core/Boot to allow early logging from cookie state.
 - `tdw-atlas-boot` must run last to apply authoritative config and start orchestration.
 - Any new module that emits `dlog`/`dwarn` during module evaluation must depend on `tdw-logger` and `tdw-atlas-cookie-ops`.

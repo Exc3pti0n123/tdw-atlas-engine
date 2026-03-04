@@ -3,6 +3,8 @@
  * Plugin Name: TDW – Atlas Engine
  * Description: Minimal atlas plugin (Leaflet + TDW Atlas boot) for rendering GeoJSON maps via shortcode.
  * Version: 0.2.0
+ * Requires at least: 6.5
+ * Requires Plugins: tdw-core
  * Author: Justin Errica
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -15,6 +17,7 @@ const TDW_ATLAS_OPTION_SETTINGS = 'tdw_atlas_settings';
 const TDW_ATLAS_OPTION_SYSTEM = 'tdw_atlas_system';
 const TDW_ATLAS_PLUGIN_FILE = __FILE__;
 const TDW_ATLAS_SEED_FILE = 'atlas.seed.json';
+const TDW_ATLAS_REQUIRED_CORE_SLUG = 'tdw-core';
 
 /* ============================================================
    Helpers
@@ -31,10 +34,61 @@ require_once plugin_dir_path(__FILE__) . 'includes/rest/index.php';
 register_activation_hook(__FILE__, 'tdw_atlas_activate');
 add_action('init', 'tdw_atlas_maybe_upgrade');
 add_action('rest_api_init', 'tdw_atlas_register_rest_routes');
+add_action('admin_notices', 'tdw_atlas_admin_dependency_notice');
 
 /* ============================================================
-   Enqueue (Leaflet + shared + Atlas scripts)
+   Enqueue (Leaflet + Atlas scripts)
    ============================================================ */
+
+function tdw_atlas_core_dependency_ready() {
+  if (!function_exists('tdw_core_shared_modules_ready')) {
+    return false;
+  }
+
+  return (bool) tdw_core_shared_modules_ready();
+}
+
+function tdw_atlas_dependency_error_message() {
+  return 'TDW Atlas Engine requires TDW Core (plugin slug: ' . TDW_ATLAS_REQUIRED_CORE_SLUG . ') with registered shared modules (tdw-bridge, tdw-logger).';
+}
+
+function tdw_atlas_admin_dependency_notice() {
+  if (!is_admin()) return;
+  if (tdw_atlas_core_dependency_ready()) return;
+  if (!current_user_can('activate_plugins')) return;
+
+  echo '<div class="notice notice-error"><p>'
+    . esc_html(tdw_atlas_dependency_error_message())
+    . '</p></div>';
+}
+
+function tdw_atlas_enqueue_base_styles() {
+  $base_dir = plugin_dir_path(__FILE__);
+  $base_url = plugin_dir_url(__FILE__);
+  $atlas_css_rel = 'assets/atlas.css';
+  $atlas_css_abs = $base_dir . $atlas_css_rel;
+
+  if (!wp_style_is('tdw-atlas', 'enqueued') && !wp_style_is('tdw-atlas', 'done')) {
+    wp_enqueue_style(
+      'tdw-atlas',
+      $base_url . $atlas_css_rel,
+      array(),
+      tdw_atlas_asset_ver($atlas_css_abs)
+    );
+  }
+}
+
+function tdw_atlas_enqueue_core_shared_modules() {
+  if (!function_exists('wp_enqueue_script_module')) return;
+
+  if (!wp_script_is('tdw-bridge', 'enqueued') && !wp_script_is('tdw-bridge', 'done')) {
+    wp_enqueue_script_module('tdw-bridge');
+  }
+
+  if (!wp_script_is('tdw-logger', 'enqueued') && !wp_script_is('tdw-logger', 'done')) {
+    wp_enqueue_script_module('tdw-logger');
+  }
+}
 
 //Enqueue vendored Leaflet 2.0.0-alpha (local vendor copy)
 
@@ -59,55 +113,13 @@ function tdw_atlas_enqueue_vendor_leaflet() {
 
 }
 
-// Enqueue shared modules
-
-function tdw_shared_enqueue_assets() {
-  $base_dir = plugin_dir_path(__FILE__);
-  $base_url = plugin_dir_url(__FILE__);
-
-  // Shared modules: tdw-bridge.js + tdw-logger.js
-  $tdw_bridge_rel = 'assets/shared/tdw-bridge.js';
-  $tdw_bridge_abs = $base_dir . $tdw_bridge_rel;
-  $tdw_logger_rel = 'assets/shared/tdw-logger.js';
-  $tdw_logger_abs = $base_dir . $tdw_logger_rel;
-
-  if (!wp_script_is('tdw-bridge', 'enqueued') && !wp_script_is('tdw-bridge', 'done')) {
-    wp_enqueue_script_module(
-      'tdw-bridge',
-      $base_url . $tdw_bridge_rel,
-      array(),
-      tdw_atlas_asset_ver($tdw_bridge_abs),
-      ['in_footer' => true]
-    );
-  }
-
-  if (!wp_script_is('tdw-logger', 'enqueued') && !wp_script_is('tdw-logger', 'done')) {
-    wp_enqueue_script_module(
-      'tdw-logger',
-      $base_url . $tdw_logger_rel,
-      array('tdw-bridge'),
-      tdw_atlas_asset_ver($tdw_logger_abs),
-      ['in_footer' => true]
-    );
-  }
-
-}
-
 // Enqueue Atlas files
 
 function tdw_atlas_enqueue_assets() {
   $base_dir = plugin_dir_path(__FILE__);
   $base_url = plugin_dir_url(__FILE__);
 
-  // Plugin css
-  $atlas_css_rel = 'assets/atlas.css';
-  $atlas_css_abs = $base_dir . $atlas_css_rel;
-  wp_enqueue_style(
-    'tdw-atlas',
-    $base_url . $atlas_css_rel,
-    array(),
-    tdw_atlas_asset_ver($atlas_css_abs)
-  );
+  tdw_atlas_enqueue_base_styles();
 
   // Atlas scripts
   $atlas_adapter_rel = 'assets/js/atlas-adapter.js';
@@ -173,11 +185,31 @@ function tdw_atlas_enqueue_assets() {
  */
 function tdw_atlas_enqueue_frontend_assets_once() {
   static $done = false;
-  if ($done) return;
+  static $result = false;
+  if ($done) return $result;
   $done = true;
+
+  if (!tdw_atlas_core_dependency_ready()) {
+    tdw_atlas_enqueue_base_styles();
+    $result = false;
+    return $result;
+  }
+
+  tdw_atlas_enqueue_core_shared_modules();
   tdw_atlas_enqueue_vendor_leaflet();
-  tdw_shared_enqueue_assets();
   tdw_atlas_enqueue_assets();
+  $result = true;
+  return $result;
+}
+
+function tdw_atlas_render_dependency_error($config_url = '') {
+  $missing_id = 'tdw-atlas-core-missing-' . wp_generate_uuid4();
+  $safe_url = esc_url($config_url);
+  $safe_msg = esc_html(tdw_atlas_dependency_error_message());
+
+  return '<div class="tdw-atlas tdw-atlas-failed" id="' . esc_attr($missing_id)
+    . '" data-tdw-atlas="1" data-config-url="' . $safe_url . '">'
+    . '<div class="tdw-error" role="alert"><strong>TDW Error:</strong> ' . $safe_msg . '</div></div>';
 }
 
 /* ============================================================
@@ -198,7 +230,9 @@ function tdw_atlas_shortcode($atts = array()) {
   $map_id = trim((string) $atts['id']);
 
   // Always enqueue runtime assets so Boot can resolve runtime errors in-container.
-  tdw_atlas_enqueue_frontend_assets_once();
+  if (!tdw_atlas_enqueue_frontend_assets_once()) {
+    return tdw_atlas_render_dependency_error($config_url);
+  }
 
   // If no id is provided, render a placeholder atlas container.
   // Boot will replace this with a visible fatal error ("Missing map id").

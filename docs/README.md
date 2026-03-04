@@ -56,5 +56,5 @@ Use this page as the central navigation hub.
 
 ## Shared Helpers (AI/Contributor Quick Find)
 
-1. `../assets/shared/tdw-logger.js` - shared logger core implementation (`window.TDW.Logger.createScopedLogger(scope)`).
+1. `../../tdw-core/assets/shared/tdw-logger.js` - shared logger core implementation (`window.TDW.Logger.createScopedLogger(scope)`).
 2. `../assets/js/helpers/atlas-shared.js` - shared normalization helpers (`normalizeBool`, `normalizeCountryCode`, ...).

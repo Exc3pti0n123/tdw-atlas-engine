@@ -22,7 +22,7 @@
 - `../templates/module-template.md`
 - `../templates/module-template-custom.md`
 2. Logger helper:
-- `../../assets/shared/tdw-logger.js`
+- `../../../tdw-core/assets/shared/tdw-logger.js`
 3. Shared normalizers:
 - `../../assets/js/helpers/atlas-shared.js`
 

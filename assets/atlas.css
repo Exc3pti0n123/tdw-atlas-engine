@@ -1,9 +1,9 @@
 /* ============================================================
    TDW Atlas Engine — atlas.css (MVP)
    ------------------------------------------------------------
-   Uses TDW design tokens from tdw-site-core if present.
+   Uses TDW design tokens from tdw-design if present.
    Falls back gracefully if tokens are missing.
-   Dark-mode ready automatically via token switching in site-core.
+   Dark-mode ready automatically via token switching in tdw-design.
    ============================================================ */
 
 /* Base atlas container (the shortcode renders .tdw-atlas) */
@@ -62,7 +62,7 @@
 }
 
 /* ============================================================
-   Error UI (class used by tdw-logger -> should be moved to TDW Core)
+   Error UI (class used by tdw-logger from TDW Core)
    ============================================================ */
 
 .tdw-error {

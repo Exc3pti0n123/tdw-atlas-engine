@@ -1,7 +1,7 @@
 === TDW Atlas Engine ===
 Contributors: thedesertwhale
 Tags: map, atlas, leaflet, geojson, shortcode
-Requires at least: 6.6
+Requires at least: 6.5
 Tested up to: 6.8
 Requires PHP: 8.1
 Stable tag: 0.2.0
@@ -14,6 +14,7 @@ TDW Atlas Engine renders interactive atlas maps via shortcode with a strict fail
 
 TDW Atlas Engine is a WordPress plugin focused on deterministic map runtime behavior:
 
+* Requires `TDW Core` (`tdw-core`) for shared namespace runtime modules (`tdw-bridge`, `tdw-logger`).
 * One shortcode container initializes one runtime core instance.
 * Adapter factory resolves renderer implementation (Leaflet in current MVP).
 * Runtime config is served from the DB-backed REST endpoint.
@@ -27,9 +28,10 @@ Main shortcode:
 == Installation ==
 
 1. Upload the plugin folder to `/wp-content/plugins/tdw-atlas-engine/`, or install the ZIP in WordPress admin.
-2. Activate the plugin through the WordPress "Plugins" screen.
-3. Place `[tdw_atlas id="world"]` in a page or post.
-4. Open the page and verify map rendering.
+2. Install and activate `TDW Core` (`tdw-core`).
+3. Activate the plugin through the WordPress "Plugins" screen.
+4. Place `[tdw_atlas id="world"]` in a page or post.
+5. Open the page and verify map rendering.
 
 == Frequently Asked Questions ==
 
