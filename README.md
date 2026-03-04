@@ -42,3 +42,8 @@ WordPress plugin for rendering GeoJSON maps via shortcode with a strict ESM runt
 ## Contribution
 
 Read `CONTRIBUTING.md` before creating a branch or PR.
+
+## Security
+
+Security reporting and disclosure policy:
+- `SECURITY.md`

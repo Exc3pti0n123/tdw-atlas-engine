@@ -22,6 +22,7 @@ Related runbook:
    - no public write/reset/import route introduced
    - strict REST schema validation active (`400` negative cases)
    - path validation active for runtime/seed inputs
+7. `SECURITY.md` reporting/disclosure info is up to date.
 
 ## Release Notes Input
 

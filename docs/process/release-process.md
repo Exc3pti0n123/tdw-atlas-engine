@@ -27,6 +27,9 @@ Use this runbook for every tagged milestone release (alpha, beta, final).
 - sea click back chain
 - preview close and link click behavior
 - no console fatal errors in valid flow
+4. Security policy check:
+- `SECURITY.md` contact/disclosure details are current
+- no new public write endpoints were introduced
 
 ## 3) Package ZIP (runtime-only)
 
