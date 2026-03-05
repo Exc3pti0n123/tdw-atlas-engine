@@ -20,6 +20,15 @@ function tdw_atlas_get_db_settings_or_default($defaults) {
   );
 }
 
+function tdw_atlas_get_map_defaults_or_error($defaults) {
+  $normalized = tdw_atlas_normalize_map_defaults_seed($defaults);
+  if (is_wp_error($normalized)) {
+    return $normalized;
+  }
+
+  return $normalized;
+}
+
 function tdw_atlas_get_grouping_payload_for_map($dataset_key, $map_key, $row) {
   global $wpdb;
 
@@ -302,7 +311,7 @@ function tdw_atlas_get_ui_payload_for_map($map_key, $row, $default_map = array()
   return tdw_atlas_normalize_preview_config($decoded, $fallback);
 }
 
-function tdw_atlas_get_db_maps_or_error($defaults, $requested_map_keys = array()) {
+function tdw_atlas_get_db_maps_or_error($map_defaults, $requested_map_keys = array()) {
   global $wpdb;
 
   $table = tdw_atlas_table_maps();
@@ -325,7 +334,9 @@ function tdw_atlas_get_db_maps_or_error($defaults, $requested_map_keys = array()
       preprocess_enabled,
       preprocess_config_json,
       focus_config_json,
-      ui_config_json
+      ui_config_json,
+      map_options_json,
+      style_json
     FROM {$table}";
 
   $params = array();
@@ -347,10 +358,7 @@ function tdw_atlas_get_db_maps_or_error($defaults, $requested_map_keys = array()
   }
 
   if (!is_array($rows) || !$rows) {
-    if ($requested) {
-      return array();
-    }
-    return new WP_Error('tdw_atlas_maps_empty', 'No map rows found in atlas maps table.', array('status' => 500));
+    return array();
   }
 
   $maps = array();
@@ -377,7 +385,7 @@ function tdw_atlas_get_db_maps_or_error($defaults, $requested_map_keys = array()
       return new WP_Error('tdw_atlas_map_row_invalid', 'Invalid map row detected in atlas maps table.', array('status' => 500));
     }
 
-    $default_map = is_array($defaults[$map_key] ?? null) ? $defaults[$map_key] : array();
+    $default_map = is_array($map_defaults) ? $map_defaults : array();
 
     $grouping = tdw_atlas_get_grouping_payload_for_map($dataset_key, $map_key, $row);
     if (is_wp_error($grouping)) return $grouping;
@@ -413,12 +421,33 @@ function tdw_atlas_get_db_maps_or_error($defaults, $requested_map_keys = array()
       $item['view'] = (string) $default_map['view'];
     }
 
-    // Optional defaults that are still JSON-owned until admin settings exist.
-    if (array_key_exists('mapOptions', $default_map)) {
+    $raw_map_options = trim((string) ($row['map_options_json'] ?? ''));
+    if ($raw_map_options !== '') {
+      $decoded_map_options = json_decode($raw_map_options, true);
+      if (!is_array($decoded_map_options)) {
+        return new WP_Error(
+          'tdw_atlas_map_options_json_invalid',
+          'Invalid map_options_json for map "' . $map_key . '".',
+          array('status' => 500)
+        );
+      }
+      $item['mapOptions'] = $decoded_map_options;
+    } elseif (array_key_exists('mapOptions', $default_map)) {
       $item['mapOptions'] = $default_map['mapOptions'];
     }
 
-    if (array_key_exists('style', $default_map)) {
+    $raw_style = trim((string) ($row['style_json'] ?? ''));
+    if ($raw_style !== '') {
+      $decoded_style = json_decode($raw_style, true);
+      if (!is_array($decoded_style)) {
+        return new WP_Error(
+          'tdw_atlas_style_json_invalid',
+          'Invalid style_json for map "' . $map_key . '".',
+          array('status' => 500)
+        );
+      }
+      $item['style'] = $decoded_style;
+    } elseif (array_key_exists('style', $default_map)) {
       $item['style'] = $default_map['style'];
     }
 
@@ -430,21 +459,35 @@ function tdw_atlas_get_db_maps_or_error($defaults, $requested_map_keys = array()
 
 function tdw_atlas_get_effective_config($requested_map_keys = array()) {
   $plugin_base_url = plugin_dir_url(TDW_ATLAS_PLUGIN_FILE);
-  $defaults = tdw_atlas_load_seed_defaults();
+  $runtime_defaults = tdw_atlas_load_runtime_seed_defaults();
+  $map_seed_defaults = tdw_atlas_load_map_seed_defaults();
 
-  if (!is_array($defaults)) {
+  if (!is_array($runtime_defaults)) {
     return new WP_Error(
       'tdw_atlas_defaults_missing',
-      'atlas.seed.json is missing or invalid.',
+      'data/seed/atlas.runtime.seed.json is missing or invalid.',
       array('status' => 500)
     );
   }
 
-  $settings = tdw_atlas_get_db_settings_or_default($defaults);
+  if (!is_array($map_seed_defaults)) {
+    return new WP_Error(
+      'tdw_atlas_map_seed_defaults_missing',
+      'data/seed/atlas.map.seed.json is missing or invalid.',
+      array('status' => 500)
+    );
+  }
+
+  $settings = tdw_atlas_get_db_settings_or_default($runtime_defaults);
   if (is_wp_error($settings)) {
     return $settings;
   }
-  $maps = tdw_atlas_get_db_maps_or_error($defaults['maps'] ?? array(), $requested_map_keys);
+  $map_defaults = tdw_atlas_get_map_defaults_or_error($map_seed_defaults['mapDefaults'] ?? array());
+  if (is_wp_error($map_defaults)) {
+    return $map_defaults;
+  }
+
+  $maps = tdw_atlas_get_db_maps_or_error($map_defaults, $requested_map_keys);
 
   if (is_wp_error($maps)) {
     return $maps;
@@ -452,7 +495,7 @@ function tdw_atlas_get_effective_config($requested_map_keys = array()) {
 
   return array(
     'meta' => array(
-      'engine' => (string) ($defaults['meta']['engine'] ?? 'tdw-atlas-engine'),
+      'engine' => (string) ($runtime_defaults['meta']['engine'] ?? 'tdw-atlas-engine'),
       'version' => TDW_ATLAS_PLUGIN_VERSION,
       'baseUrl' => $plugin_base_url,
     ),

@@ -8,8 +8,10 @@
 - `../process/merge-strategy.md`
 
 2. Run plugin locally and verify:
-- `[tdw_atlas id="world"]`
-- `/wp-json/tdw-atlas/v1/config`
+- `/wp-json/tdw-atlas/v1/config` returns valid JSON (empty `maps` is allowed after reset).
+- Atlas admin loads under `TheDesertWhale -> Atlas` with list-first layout (`Maps` + `New | Delete`).
+- New-map modal shows datasets from `data/dataset/*`.
+- Edit opens via `admin.php?page=tdw-atlas-admin&id=<map_key>`.
 
 3. Run non-UI checks:
 - `npm run test:non-ui`
@@ -25,6 +27,9 @@
 - `../../../tdw-core/assets/shared/tdw-logger.js`
 3. Shared normalizers:
 - `../../assets/js/helpers/atlas-shared.js`
+4. Sister project contracts:
+- `../../../tdw-core/docs/contracts.md`
+- `../../../tdw-design/docs/contracts.md`
 
 ## How to Start a Task
 

@@ -16,8 +16,13 @@ const TDW_ATLAS_PLUGIN_VERSION = '0.2.0';
 const TDW_ATLAS_OPTION_SETTINGS = 'tdw_atlas_settings';
 const TDW_ATLAS_OPTION_SYSTEM = 'tdw_atlas_system';
 const TDW_ATLAS_PLUGIN_FILE = __FILE__;
-const TDW_ATLAS_SEED_FILE = 'atlas.seed.json';
+const TDW_ATLAS_RUNTIME_SEED_FILE = 'data/seed/atlas.runtime.seed.json';
+const TDW_ATLAS_MAP_SEED_FILE = 'data/seed/atlas.map.seed.json';
 const TDW_ATLAS_REQUIRED_CORE_SLUG = 'tdw-core';
+const TDW_ATLAS_ADMIN_PAGE_SLUG = 'tdw-atlas-admin';
+const TDW_ATLAS_ADMIN_REQUIRED_CAP = 'manage_options';
+const TDW_ATLAS_REPO_SRC_URL = 'https://github.com/Exc3pti0n123/tdw-atlas-engine';
+const TDW_ATLAS_REPO_DOCS_URL = 'https://github.com/Exc3pti0n123/tdw-atlas-engine/tree/main/docs';
 
 /* ============================================================
    Helpers
@@ -30,6 +35,51 @@ function tdw_atlas_asset_ver($abs_path, $fallback = '0.2.0') {
 require_once plugin_dir_path(__FILE__) . 'includes/runtime/index.php';
 require_once plugin_dir_path(__FILE__) . 'includes/db/index.php';
 require_once plugin_dir_path(__FILE__) . 'includes/rest/index.php';
+
+/**
+ * Detect Atlas admin REST requests early (before REST_REQUEST is defined).
+ *
+ * @return bool
+ */
+function tdw_atlas_is_admin_rest_request() {
+  $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+  if ($uri !== '' && strpos($uri, '/tdw-atlas/v1/admin/') !== false) {
+    return true;
+  }
+
+  if (!isset($_GET['rest_route'])) {
+    return false;
+  }
+
+  $raw_route = $_GET['rest_route'];
+  if (is_array($raw_route)) {
+    return false;
+  }
+
+  $route = (string) $raw_route;
+  if (function_exists('wp_unslash')) {
+    $route = (string) wp_unslash($route);
+  }
+
+  return $route !== '' && strpos($route, '/tdw-atlas/v1/admin/') !== false;
+}
+
+/**
+ * Decide whether admin subsystem must be loaded for current request.
+ *
+ * @return bool
+ */
+function tdw_atlas_should_load_admin_subsystem() {
+  if (function_exists('is_admin') && is_admin()) {
+    return true;
+  }
+
+  return tdw_atlas_is_admin_rest_request();
+}
+
+if (tdw_atlas_should_load_admin_subsystem()) {
+  require_once plugin_dir_path(__FILE__) . 'includes/admin/index.php';
+}
 
 register_activation_hook(__FILE__, 'tdw_atlas_activate');
 add_action('init', 'tdw_atlas_maybe_upgrade');

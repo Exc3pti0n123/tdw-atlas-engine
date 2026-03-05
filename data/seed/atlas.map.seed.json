@@ -1,0 +1,1473 @@
+{
+  "meta": {
+    "engine": "tdw-atlas-engine",
+    "version": "0.2.0",
+    "seed": "map"
+  },
+  "mapDefaults": {
+    "adapter": "leaflet",
+    "grouping": {
+      "enabled": true,
+      "mode": "set",
+      "geojsonProperty": "REGION_UN"
+    },
+    "whitelist": {
+      "enabled": true,
+      "defaultIncluded": false
+    },
+    "preprocess": {
+      "enabled": true,
+      "partRules": []
+    },
+    "regionLayer": {
+      "enabled": true
+    },
+    "view": "world",
+    "focus": {},
+    "ui": {
+      "preview": {
+        "showRegionPreview": true,
+        "showCountryPreview": true,
+        "desktopSide": "right",
+        "switchToBottomMaxWHRatio": 0.85
+      }
+    },
+    "mapOptions": {},
+    "style": {}
+  },
+  "countryProfile": {
+    "members": [
+      {
+        "countryCode": "AD",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "AND"
+      },
+      {
+        "countryCode": "AE",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "ARE"
+      },
+      {
+        "countryCode": "AF",
+        "regionKey": "south-central-asia",
+        "whitelist": true,
+        "iso3": "AFG"
+      },
+      {
+        "countryCode": "AG",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "ATG"
+      },
+      {
+        "countryCode": "AI",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "AIA"
+      },
+      {
+        "countryCode": "AL",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "ALB"
+      },
+      {
+        "countryCode": "AM",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "ARM"
+      },
+      {
+        "countryCode": "AO",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "AGO"
+      },
+      {
+        "countryCode": "AQ",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "ATA"
+      },
+      {
+        "countryCode": "AR",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "ARG"
+      },
+      {
+        "countryCode": "AS",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "ASM"
+      },
+      {
+        "countryCode": "AT",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "AUT"
+      },
+      {
+        "countryCode": "AU",
+        "regionKey": "oceania",
+        "whitelist": true,
+        "iso3": "AUS"
+      },
+      {
+        "countryCode": "AW",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "ABW"
+      },
+      {
+        "countryCode": "AX",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "ALA"
+      },
+      {
+        "countryCode": "AZ",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "AZE"
+      },
+      {
+        "countryCode": "BA",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "BIH"
+      },
+      {
+        "countryCode": "BB",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "BRB"
+      },
+      {
+        "countryCode": "BD",
+        "regionKey": "south-asia",
+        "whitelist": true,
+        "iso3": "BGD"
+      },
+      {
+        "countryCode": "BE",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "BEL"
+      },
+      {
+        "countryCode": "BF",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "BFA"
+      },
+      {
+        "countryCode": "BG",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "BGR"
+      },
+      {
+        "countryCode": "BH",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "BHR"
+      },
+      {
+        "countryCode": "BI",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "BDI"
+      },
+      {
+        "countryCode": "BJ",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "BEN"
+      },
+      {
+        "countryCode": "BL",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "BLM"
+      },
+      {
+        "countryCode": "BM",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "BMU"
+      },
+      {
+        "countryCode": "BN",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "BRN"
+      },
+      {
+        "countryCode": "BO",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "BOL"
+      },
+      {
+        "countryCode": "BR",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "BRA"
+      },
+      {
+        "countryCode": "BS",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "BHS"
+      },
+      {
+        "countryCode": "BT",
+        "regionKey": "south-asia",
+        "whitelist": true,
+        "iso3": "BTN"
+      },
+      {
+        "countryCode": "BW",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "BWA"
+      },
+      {
+        "countryCode": "BY",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "BLR"
+      },
+      {
+        "countryCode": "BZ",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "BLZ"
+      },
+      {
+        "countryCode": "CA",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "CAN"
+      },
+      {
+        "countryCode": "CD",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "COD"
+      },
+      {
+        "countryCode": "CF",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "CAF"
+      },
+      {
+        "countryCode": "CG",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "COG"
+      },
+      {
+        "countryCode": "CH",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "CHE"
+      },
+      {
+        "countryCode": "CI",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "CIV"
+      },
+      {
+        "countryCode": "CK",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "COK"
+      },
+      {
+        "countryCode": "CL",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "CHL"
+      },
+      {
+        "countryCode": "CM",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "CMR"
+      },
+      {
+        "countryCode": "CN",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "CHN"
+      },
+      {
+        "countryCode": "CO",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "COL"
+      },
+      {
+        "countryCode": "CR",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "CRI"
+      },
+      {
+        "countryCode": "CU",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "CUB"
+      },
+      {
+        "countryCode": "CV",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "CPV"
+      },
+      {
+        "countryCode": "CW",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "CUW"
+      },
+      {
+        "countryCode": "CY",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "CYP"
+      },
+      {
+        "countryCode": "CZ",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "CZE"
+      },
+      {
+        "countryCode": "DE",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "DEU"
+      },
+      {
+        "countryCode": "DJ",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "DJI"
+      },
+      {
+        "countryCode": "DK",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "DNK"
+      },
+      {
+        "countryCode": "DM",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "DMA"
+      },
+      {
+        "countryCode": "DO",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "DOM"
+      },
+      {
+        "countryCode": "DZ",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "DZA"
+      },
+      {
+        "countryCode": "EC",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "ECU"
+      },
+      {
+        "countryCode": "EE",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "EST"
+      },
+      {
+        "countryCode": "EG",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "EGY"
+      },
+      {
+        "countryCode": "EH",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "ESH"
+      },
+      {
+        "countryCode": "ER",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "ERI"
+      },
+      {
+        "countryCode": "ES",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "ESP"
+      },
+      {
+        "countryCode": "ET",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "ETH"
+      },
+      {
+        "countryCode": "FI",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "FIN"
+      },
+      {
+        "countryCode": "FJ",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "FJI"
+      },
+      {
+        "countryCode": "FK",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "FLK"
+      },
+      {
+        "countryCode": "FM",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "FSM"
+      },
+      {
+        "countryCode": "FO",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "FRO"
+      },
+      {
+        "countryCode": "FR",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "FRA"
+      },
+      {
+        "countryCode": "GA",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "GAB"
+      },
+      {
+        "countryCode": "GB",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "GBR"
+      },
+      {
+        "countryCode": "GD",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "GRD"
+      },
+      {
+        "countryCode": "GE",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "GEO"
+      },
+      {
+        "countryCode": "GF",
+        "regionKey": "south-america",
+        "whitelist": true
+      },
+      {
+        "countryCode": "GG",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "GGY"
+      },
+      {
+        "countryCode": "GH",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "GHA"
+      },
+      {
+        "countryCode": "GL",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "GRL"
+      },
+      {
+        "countryCode": "GM",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "GMB"
+      },
+      {
+        "countryCode": "GN",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "GIN"
+      },
+      {
+        "countryCode": "GQ",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "GNQ"
+      },
+      {
+        "countryCode": "GR",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "GRC"
+      },
+      {
+        "countryCode": "GS",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "SGS"
+      },
+      {
+        "countryCode": "GT",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "GTM"
+      },
+      {
+        "countryCode": "GU",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "GUM"
+      },
+      {
+        "countryCode": "GW",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "GNB"
+      },
+      {
+        "countryCode": "GY",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "GUY"
+      },
+      {
+        "countryCode": "HK",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "HKG"
+      },
+      {
+        "countryCode": "HM",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "HMD"
+      },
+      {
+        "countryCode": "HN",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "HND"
+      },
+      {
+        "countryCode": "HR",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "HRV"
+      },
+      {
+        "countryCode": "HT",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "HTI"
+      },
+      {
+        "countryCode": "HU",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "HUN"
+      },
+      {
+        "countryCode": "ID",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "IDN"
+      },
+      {
+        "countryCode": "IE",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "IRL"
+      },
+      {
+        "countryCode": "IL",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "ISR"
+      },
+      {
+        "countryCode": "IM",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "IMN"
+      },
+      {
+        "countryCode": "IN",
+        "regionKey": "south-asia",
+        "whitelist": true,
+        "iso3": "IND"
+      },
+      {
+        "countryCode": "IO",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "IOT"
+      },
+      {
+        "countryCode": "IQ",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "IRQ"
+      },
+      {
+        "countryCode": "IR",
+        "regionKey": "south-central-asia",
+        "whitelist": true,
+        "iso3": "IRN"
+      },
+      {
+        "countryCode": "IS",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "ISL"
+      },
+      {
+        "countryCode": "IT",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "ITA"
+      },
+      {
+        "countryCode": "JE",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "JEY"
+      },
+      {
+        "countryCode": "JM",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "JAM"
+      },
+      {
+        "countryCode": "JO",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "JOR"
+      },
+      {
+        "countryCode": "JP",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "JPN"
+      },
+      {
+        "countryCode": "KE",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "KEN"
+      },
+      {
+        "countryCode": "KG",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "KGZ"
+      },
+      {
+        "countryCode": "KH",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "KHM"
+      },
+      {
+        "countryCode": "KI",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "KIR"
+      },
+      {
+        "countryCode": "KM",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "COM"
+      },
+      {
+        "countryCode": "KN",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "KNA"
+      },
+      {
+        "countryCode": "KP",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "PRK"
+      },
+      {
+        "countryCode": "KR",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "KOR"
+      },
+      {
+        "countryCode": "KW",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "KWT"
+      },
+      {
+        "countryCode": "KY",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "CYM"
+      },
+      {
+        "countryCode": "KZ",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "KAZ"
+      },
+      {
+        "countryCode": "LA",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "LAO"
+      },
+      {
+        "countryCode": "LB",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "LBN"
+      },
+      {
+        "countryCode": "LC",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "LCA"
+      },
+      {
+        "countryCode": "LI",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "LIE"
+      },
+      {
+        "countryCode": "LK",
+        "regionKey": "south-asia",
+        "whitelist": true,
+        "iso3": "LKA"
+      },
+      {
+        "countryCode": "LR",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "LBR"
+      },
+      {
+        "countryCode": "LS",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "LSO"
+      },
+      {
+        "countryCode": "LT",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "LTU"
+      },
+      {
+        "countryCode": "LU",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "LUX"
+      },
+      {
+        "countryCode": "LV",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "LVA"
+      },
+      {
+        "countryCode": "LY",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "LBY"
+      },
+      {
+        "countryCode": "MA",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "MAR"
+      },
+      {
+        "countryCode": "MC",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "MCO"
+      },
+      {
+        "countryCode": "MD",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "MDA"
+      },
+      {
+        "countryCode": "ME",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "MNE"
+      },
+      {
+        "countryCode": "MF",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "MAF"
+      },
+      {
+        "countryCode": "MG",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "MDG"
+      },
+      {
+        "countryCode": "MH",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "MHL"
+      },
+      {
+        "countryCode": "MK",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "MKD"
+      },
+      {
+        "countryCode": "ML",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "MLI"
+      },
+      {
+        "countryCode": "MM",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "MMR"
+      },
+      {
+        "countryCode": "MN",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "MNG"
+      },
+      {
+        "countryCode": "MO",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "MAC"
+      },
+      {
+        "countryCode": "MP",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "MNP"
+      },
+      {
+        "countryCode": "MR",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "MRT"
+      },
+      {
+        "countryCode": "MS",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "MSR"
+      },
+      {
+        "countryCode": "MT",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "MLT"
+      },
+      {
+        "countryCode": "MU",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "MUS"
+      },
+      {
+        "countryCode": "MV",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "MDV"
+      },
+      {
+        "countryCode": "MW",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "MWI"
+      },
+      {
+        "countryCode": "MX",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "MEX"
+      },
+      {
+        "countryCode": "MY",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "MYS"
+      },
+      {
+        "countryCode": "MZ",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "MOZ"
+      },
+      {
+        "countryCode": "NA",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "NAM"
+      },
+      {
+        "countryCode": "NC",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "NCL"
+      },
+      {
+        "countryCode": "NE",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "NER"
+      },
+      {
+        "countryCode": "NF",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "NFK"
+      },
+      {
+        "countryCode": "NG",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "NGA"
+      },
+      {
+        "countryCode": "NI",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "NIC"
+      },
+      {
+        "countryCode": "NL",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "NLD"
+      },
+      {
+        "countryCode": "NO",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "NOR"
+      },
+      {
+        "countryCode": "NP",
+        "regionKey": "south-asia",
+        "whitelist": true,
+        "iso3": "NPL"
+      },
+      {
+        "countryCode": "NR",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "NRU"
+      },
+      {
+        "countryCode": "NU",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "NIU"
+      },
+      {
+        "countryCode": "NZ",
+        "regionKey": "oceania",
+        "whitelist": true,
+        "iso3": "NZL"
+      },
+      {
+        "countryCode": "OM",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "OMN"
+      },
+      {
+        "countryCode": "PA",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "PAN"
+      },
+      {
+        "countryCode": "PE",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "PER"
+      },
+      {
+        "countryCode": "PF",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "PYF"
+      },
+      {
+        "countryCode": "PG",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "PNG"
+      },
+      {
+        "countryCode": "PH",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "PHL"
+      },
+      {
+        "countryCode": "PK",
+        "regionKey": "south-central-asia",
+        "whitelist": true,
+        "iso3": "PAK"
+      },
+      {
+        "countryCode": "PL",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "POL"
+      },
+      {
+        "countryCode": "PM",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "SPM"
+      },
+      {
+        "countryCode": "PN",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "PCN"
+      },
+      {
+        "countryCode": "PR",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "PRI"
+      },
+      {
+        "countryCode": "PS",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "PSE"
+      },
+      {
+        "countryCode": "PT",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "PRT"
+      },
+      {
+        "countryCode": "PW",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "PLW"
+      },
+      {
+        "countryCode": "PY",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "PRY"
+      },
+      {
+        "countryCode": "QA",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "QAT"
+      },
+      {
+        "countryCode": "RO",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "ROU"
+      },
+      {
+        "countryCode": "RS",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "SRB"
+      },
+      {
+        "countryCode": "RU",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "RUS"
+      },
+      {
+        "countryCode": "RW",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "RWA"
+      },
+      {
+        "countryCode": "SA",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "SAU"
+      },
+      {
+        "countryCode": "SB",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "SLB"
+      },
+      {
+        "countryCode": "SC",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "SYC"
+      },
+      {
+        "countryCode": "SD",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "SDN"
+      },
+      {
+        "countryCode": "SE",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "SWE"
+      },
+      {
+        "countryCode": "SG",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "SGP"
+      },
+      {
+        "countryCode": "SH",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "SHN"
+      },
+      {
+        "countryCode": "SI",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "SVN"
+      },
+      {
+        "countryCode": "SJ",
+        "regionKey": "europe",
+        "whitelist": true
+      },
+      {
+        "countryCode": "SK",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "SVK"
+      },
+      {
+        "countryCode": "SL",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "SLE"
+      },
+      {
+        "countryCode": "SM",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "SMR"
+      },
+      {
+        "countryCode": "SN",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "SEN"
+      },
+      {
+        "countryCode": "SO",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "SOM"
+      },
+      {
+        "countryCode": "SR",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "SUR"
+      },
+      {
+        "countryCode": "SS",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "SSD"
+      },
+      {
+        "countryCode": "ST",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "STP"
+      },
+      {
+        "countryCode": "SV",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "SLV"
+      },
+      {
+        "countryCode": "SX",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "SXM"
+      },
+      {
+        "countryCode": "SY",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "SYR"
+      },
+      {
+        "countryCode": "SZ",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "SWZ"
+      },
+      {
+        "countryCode": "TC",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "TCA"
+      },
+      {
+        "countryCode": "TD",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "TCD"
+      },
+      {
+        "countryCode": "TF",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "ATF"
+      },
+      {
+        "countryCode": "TG",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "TGO"
+      },
+      {
+        "countryCode": "TH",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "THA"
+      },
+      {
+        "countryCode": "TJ",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "TJK"
+      },
+      {
+        "countryCode": "TL",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "TLS"
+      },
+      {
+        "countryCode": "TM",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "TKM"
+      },
+      {
+        "countryCode": "TN",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "TUN"
+      },
+      {
+        "countryCode": "TO",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "TON"
+      },
+      {
+        "countryCode": "TR",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "TUR"
+      },
+      {
+        "countryCode": "TT",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "TTO"
+      },
+      {
+        "countryCode": "TV",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "TUV"
+      },
+      {
+        "countryCode": "TW",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "TWN"
+      },
+      {
+        "countryCode": "TZ",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "TZA"
+      },
+      {
+        "countryCode": "UA",
+        "regionKey": "europe",
+        "whitelist": true,
+        "iso3": "UKR"
+      },
+      {
+        "countryCode": "UG",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "UGA"
+      },
+      {
+        "countryCode": "US",
+        "regionKey": "north-america",
+        "whitelist": true,
+        "iso3": "USA"
+      },
+      {
+        "countryCode": "UY",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "URY"
+      },
+      {
+        "countryCode": "UZ",
+        "regionKey": "central-asia",
+        "whitelist": true,
+        "iso3": "UZB"
+      },
+      {
+        "countryCode": "VA",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "VAT"
+      },
+      {
+        "countryCode": "VC",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "VCT"
+      },
+      {
+        "countryCode": "VE",
+        "regionKey": "south-america",
+        "whitelist": true,
+        "iso3": "VEN"
+      },
+      {
+        "countryCode": "VG",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "VGB"
+      },
+      {
+        "countryCode": "VI",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "VIR"
+      },
+      {
+        "countryCode": "VN",
+        "regionKey": "sea",
+        "whitelist": true,
+        "iso3": "VNM"
+      },
+      {
+        "countryCode": "VU",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "VUT"
+      },
+      {
+        "countryCode": "WF",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "WLF"
+      },
+      {
+        "countryCode": "WS",
+        "regionKey": "unassigned",
+        "whitelist": false,
+        "iso3": "WSM"
+      },
+      {
+        "countryCode": "XK",
+        "regionKey": "europe",
+        "whitelist": true
+      },
+      {
+        "countryCode": "YE",
+        "regionKey": "near-east",
+        "whitelist": true,
+        "iso3": "YEM"
+      },
+      {
+        "countryCode": "ZA",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "ZAF"
+      },
+      {
+        "countryCode": "ZM",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "ZMB"
+      },
+      {
+        "countryCode": "ZW",
+        "regionKey": "africa",
+        "whitelist": true,
+        "iso3": "ZWE"
+      }
+    ]
+  }
+}

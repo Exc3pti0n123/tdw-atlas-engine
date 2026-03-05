@@ -7,7 +7,7 @@
 - Runtime Config:
   - Effective config payload from `/wp-json/tdw-atlas/v1/config`.
 - Bootstrap Defaults:
-  - Static defaults in `atlas.seed.json`, used for DB seeding/fallback.
+  - Static defaults in `data/seed/atlas.runtime.seed.json` and `data/seed/atlas.map.seed.json`, used for DB seeding/fallback.
 - Adapter Key:
   - `maps.{id}.adapter` value selecting concrete renderer adapter module.
 - Adapter Factory:

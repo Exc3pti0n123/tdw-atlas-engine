@@ -20,6 +20,10 @@ function tdw_atlas_rest_config_handler($request) {
     return tdw_atlas_rest_error_response($config, 500);
   }
 
+  if (is_array($config) && is_array($config['maps'] ?? null)) {
+    $config['maps'] = (object) $config['maps'];
+  }
+
   return new WP_REST_Response($config, 200);
 }
 

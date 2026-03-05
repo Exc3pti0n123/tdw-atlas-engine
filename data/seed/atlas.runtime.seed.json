@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "engine": "tdw-atlas-engine",
+    "version": "0.2.0",
+    "seed": "runtime"
+  },
+  "debug": true,
+  "views": {
+    "world": {}
+  },
+  "vendor": {
+    "leafletJs": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet-src.js",
+    "leafletCss": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet.css"
+  }
+}

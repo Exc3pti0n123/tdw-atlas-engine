@@ -7,7 +7,7 @@ If you change a contract, update this file and bump the plugin version.
 
 - **WordPress Runtime (PHP)**: renders shortcodes, serves static assets, decides which scripts/styles are enqueued.
 - **Content Editors (WP Block Editor)**: place `[tdw_atlas]` shortcodes and wrap them in layout groups.
-- **TDW Design plugin (`tdw-design`)**: provides optional global design tokens (CSS variables) used by Atlas UI.
+- **TDW Design plugin (`tdw-design`)**: provides optional global design tokens (CSS variables) used by Atlas UI; Atlas must preserve local CSS fallbacks when tokens are unavailable.
 - **TDW Core plugin (`tdw-core`)**: provides shared namespace runtime modules (`tdw-bridge`, `tdw-logger`).
 - **TDW Atlas Boot (JS)**: orchestrates loading config + map data and wiring Core + Adapter.
 - **TDW Atlas Adapter Factory (JS)**: resolves configured adapter key to concrete adapter instance.
@@ -83,98 +83,43 @@ Notes:
 - Shared normalization helpers are centralized in:
   - `assets/js/helpers/atlas-shared.js`
 
-## Contract 4 — Config Source (JSON bootstrap + DB-backed runtime)
+## Contract 4 — Config Sources and Effective Runtime
 
-### Bootstrap location
-- Plugin root: `tdw-atlas-engine/atlas.seed.json`
+### Seed sources (hard-cut #35)
+- Plugin path: `data/seed/atlas.runtime.seed.json` for global runtime defaults (`meta`, `debug`, `vendor`, `views`).
+- Plugin path: `data/seed/atlas.map.seed.json` for map defaults + country profile (`countryProfile.members`).
+- Plugin path: `data/dataset/*` (`.json`, `.svg`) as admin dataset catalog.
+- `data/world-regions.v1.json` remains a reference source for profile maintenance and tooling, not a runtime authority.
 
-### Minimal schema (MVP)
-```json
-{
-  "meta": { "engine": "tdw-atlas-engine", "version": "0.2.0" },
-  "debug": true,
-  "vendor": {
-    "leafletJs": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet-src.js",
-    "leafletCss": "/wp-content/plugins/tdw-atlas-engine/assets/vendor/leaflet/2.0.0-alpha-2.1/leaflet.css"
-  },
-  "maps": {
-    "world": {
-      "adapter": "leaflet",
-      "datasetKey": "world-v1",
-      "geojson": "data/ne_50m_admin_0_countries_lakes.json",
-      "groupingTemplate": "data/world-regions.v1.json",
-      "grouping": { "enabled": true, "mode": "set", "setKey": "world-default-v1" },
-      "whitelist": { "enabled": true, "defaultIncluded": false },
-      "preprocess": { "enabled": true },
-      "regionLayer": { "enabled": true },
-      "focus": {
-        "world": { "padding": [28, 28] },
-        "region": { "padding": [24, 24] },
-        "country": { "padding": [20, 20] }
-      },
-      "ui": {
-        "preview": {
-          "showRegionPreview": true,
-          "showCountryPreview": true,
-          "desktopSide": "right",
-          "switchToBottomMaxWHRatio": 0.85
-        }
-      },
-      "view": "world"
-    }
-  },
-  "views": {
-    "world": { "bounds": [[-56, -130], [83, 130]] }
-  }
-}
-```
+### Runtime authority
+- Effective runtime payload is served from `/wp-json/tdw-atlas/v1/config`.
+- `maps` in runtime payload are assembled from DB table rows only.
+- Empty map set is valid: `/config` must return `"maps": {}` and not fail.
+- `mapDefaults` from `data/seed/atlas.map.seed.json` are used as fallback for optional per-map fields (`view`, `focus`, `ui`, `mapOptions`, `style`) when DB values are absent.
 
 ### Rules
-- `debug` is the single authoritative source for whether debug should be enabled.
-- Runtime config is served via `/wp-json/tdw-atlas/v1/config` (effective config from DB).
-- Runtime may pass optional query param `map_ids` (comma-separated map keys) to receive only required page-local maps.
+- `debug` source of truth is `tdw_atlas_settings.debug` with runtime seed fallback.
+- `vendor` and `views` are global runtime-level settings (not per map).
+- Runtime may pass optional query param `map_ids` (comma-separated map keys) to receive only page-local maps.
   - strict schema: each map id must match `^[a-z0-9_-]{1,64}$`
-  - invalid `map_ids` input must return `400` (fail-closed; no sanitize-and-continue)
-- `maps.{id}.adapter` is required and selects the concrete adapter module.
+  - invalid `map_ids` input returns `400` (fail-closed)
+- `maps.{id}.adapter` selects the concrete adapter module.
 - `maps.{id}.geojson` is a strict plugin-relative `.json` path.
   - forbidden: `..`, protocol prefixes (`http://`, `https://`), protocol-relative (`//`), absolute paths.
-- `maps.{id}.datasetKey` is required and binds runtime map data to DB dataset metadata.
-- `maps.{id}.grouping` is required and controls grouping mode (`set|geojson|off`).
-- `maps.{id}.whitelist` is required and controls include/exclude policy independently of grouping.
-- `maps.{id}.preprocess` is required and contains geometry preprocessing policy.
-- `maps.{id}.preprocess.enabled` is the master switch for the runtime preprocessor:
-  - `true/1`: preprocessor runs (whitelist, grouping, part-rules, geometry preprocessing).
-  - `false/0`: preprocessor runs in passthrough mode and preprocessor-managed settings (`whitelist`, `grouping`, `part-rules`, geometry tasks) are ignored for that map instance.
-- `groupingTemplate` is seed-only metadata; Boot must not fetch this file at runtime.
-- `maps.{id}.regionLayer.enabled` is optional, default `true`; runtime preprocessor uses it to enable/disable grouped region runtime layer preparation.
-- `maps.{id}.focus` is optional and controls map focus paddings per interaction stage:
-  - `focus.world.padding` for initial world fit and return-to-world fit.
-  - `focus.region.padding` for region-level fly/fit interactions.
-  - `focus.country.padding` for country-level fly/fit interactions.
-  - `focus.region.excludeCountriesByGroup` (optional) can exclude specific countries from region focus bound calculation, e.g. `{"europe": ["GL", "SJ"]}`.
-- `maps.{id}.ui.preview` controls adapter-agnostic preview behavior:
-  - `showRegionPreview` (boolean)
-  - `showCountryPreview` (boolean)
-  - `desktopSide` (`left|right`)
-  - `switchToBottomMaxWHRatio` (number, `W/H < ratio` => bottom placement)
-- `views.{viewId}.bounds` is optional but recommended for predictable fit.
-- On plugin version change, DB settings/maps are reseeded from `atlas.seed.json` (deterministic dev reset policy).
-- DB freeze baseline and ownership split are defined in `docs/architecture/database-model.md`.
-
-### Country Grouping Seed Template Contract (`groupingTemplate`)
-```json
-{
-  "meta": { "id": "world-regions.v1", "version": "1.2.0" },
-  "set": { "datasetKey": "world-v1", "setKey": "world-default-v1", "sourceType": "system" },
-  "members": [{ "countryCode": "DE", "regionKey": "europe" }]
-}
-```
-
-Rules:
-- `members` are canonical for template import/export.
-- Runtime does not fetch this file directly; template is seed source only.
-- Country codes must be ISO-like 2-letter uppercase values.
-- In runtime/docs use the term `country grouping` consistently.
+- `maps.{id}.datasetKey` binds runtime map data to DB dataset metadata.
+- `maps.{id}.grouping` controls grouping mode (`set|geojson|off`).
+- `maps.{id}.whitelist` controls include/exclude policy independently of grouping.
+- `maps.{id}.preprocess` contains geometry preprocessing policy.
+- `maps.{id}.preprocess.enabled` is the master preprocessor switch:
+  - `true/1`: preprocessor runs with whitelist/grouping/part-rules processing.
+  - `false/0`: preprocessor runs in passthrough mode and preprocessor-managed settings are ignored.
+- `maps.{id}.regionLayer.enabled` is optional (default `true`).
+- `maps.{id}.ui.preview` controls adapter-agnostic preview behavior.
+- On plugin version change, deterministic DB reset + reseed from runtime/map seed files is applied (dev hard-cut policy).
+- DB ownership and freeze baseline are defined in `docs/architecture/database-model.md`.
+- Create-map mismatch policy is fixed in code (not configurable):
+  - `>= 10` missing profile mappings: create fails with `400`.
+  - `<= 9` missing profile mappings: map is created with `region=unassigned`, `whitelist=false`, `confirmed=false`.
 
 ### PHP implementation ownership
 - `tdw-atlas-engine.php`: plugin bootstrap, constants, hooks, enqueue, shortcode.
@@ -189,29 +134,52 @@ Rules:
 - `includes/rest/preview.php`: preview payload resolver.
 - `includes/rest/handlers.php`: config/preview request handlers.
 - `includes/rest/routes.php`: route registration for config + preview endpoints.
+- `includes/admin/index.php`: admin subsystem bootstrap.
+- `includes/admin/menu.php`: Atlas submenu registration + page renderer.
+- `includes/admin/assets.php`: admin asset enqueue + inline config.
+- `includes/admin/api/routes.php`: admin REST route registration.
+- `includes/admin/api/handlers.php`: admin REST handlers.
+- `includes/admin/service/validation.php`: strict payload validation.
+- `includes/admin/service/transactions.php`: transaction wrapper.
+- `includes/admin/service/repository.php`: DB CRUD/read model for admin.
 
 ---
 
-## Contract 4.1 — Admin GUI Transactional Writes (Follow-up #14)
+## Contract 4.1 — Admin GUI Write Surface (#14)
 
-### Current state (`#37`)
-
-1. Dev seed/reset flow intentionally runs without DB transaction wrappers.
-2. Seed policy remains destructive reset + reseed on version drift.
-
-### Required for Admin GUI (`#14`)
-
-1. Multi-step CRUD writes must run in a DB transaction:
-   - `START TRANSACTION`
-   - apply all dependent writes
-   - `COMMIT` only on full success
-   - `ROLLBACK` on any failure
-2. API must fail-fast on write errors and never leave partial persisted state.
+1. Admin write REST routes live under `/wp-json/tdw-atlas/v1/admin/...`.
+2. Mutating routes require both:
+   - capability: `manage_options`
+   - valid REST nonce (`X-WP-Nonce` / `_wpnonce`)
+3. Active admin routes:
+   - `GET /admin/bootstrap`
+   - `GET /admin/datasets`
+   - `GET /admin/maps`
+   - `GET /admin/maps/{map_key}`
+   - `POST /admin/maps/create`
+   - `POST /admin/maps/bulk-delete`
+   - `PUT /admin/maps/{map_key}/general`
+   - `GET /admin/maps/{map_key}/countries`
+   - `PUT /admin/maps/{map_key}/countries`
+   - `GET /admin/defaults`
+   - `PUT /admin/defaults/runtime`
+   - `POST /admin/reset` (dev/backend use; not exposed in primary list UI)
+4. Map writes and reset flows are transaction-wrapped (`START TRANSACTION` + `COMMIT/ROLLBACK`).
+5. Input validation is strict and fail-closed (`400` on invalid payload).
+6. Public runtime routes (`/config`, `/preview`) remain read-only.
+7. `POST /admin/maps/create` accepts `{label, mapKey, datasetPath}` and materializes map config from `atlas.map.seed`.
+8. Create-flow limits are strict:
+   - `label`: max 32 chars
+   - `mapKey`: max 8 chars
+9. `PUT /admin/maps/{map_key}/general` limits are strict:
+   - `label`: max 32 chars
+   - `description`: max 191 chars
+10. `POST /admin/maps/bulk-delete` accepts `{mapKeys: string[]}` (min 1).
 
 ## Contract 4.2 — Security Baseline (Minimal 5)
 
 1. Public Atlas REST surface is read-only.
-2. Admin write endpoints (future) must enforce:
+2. Admin write endpoints enforce:
    - capability check
    - nonce validation
    - strict schema validation
@@ -467,6 +435,21 @@ Adapters must implement:
 
 Atlas CSS must rely on tokens provided by `tdw-design` when available:
 - `--tdw-bg`, `--tdw-text`, `--tdw-muted`, `--tdw-water`, `--tdw-border`, etc.
+
+### Fallback rule (mandatory)
+
+- If a design token is unavailable, Atlas must keep component-local CSS fallbacks (no blank/invalid styles).
+- Current required fallback baseline in `assets/atlas.css`:
+  - `--tdw-card` -> `#ffffff`
+  - `--tdw-text` -> `#1D1A16`
+  - `--tdw-water` -> `#3C9FAE`
+  - `--tdw-water-hover` -> `#2F8A97`
+  - `--tdw-border` -> component local fallback (for example `rgba(0, 0, 0, 0.2)`)
+
+### Cross-project contract references
+
+- `../../tdw-design/docs/contracts.md`
+- `../../tdw-core/docs/contracts.md`
 
 ### Debug helper
 - In debug mode, a token check may warn if required tokens are missing.

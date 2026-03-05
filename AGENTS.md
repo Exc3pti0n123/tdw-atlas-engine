@@ -104,3 +104,9 @@ All agents must enforce the minimal 5-rule baseline:
 3. No dynamic execution/path resolution from request or DB-controlled values.
 4. Fail-closed for invalid security-relevant input (no sanitize-and-continue).
 5. SQL with variable input must use prepared statements.
+
+## 10) Delivery Workflow (project-wide)
+
+1. After every implementation response, include a concise UI/UX test checklist for human acceptance.
+2. After implementation completion, set related issues to `Implemented`.
+3. If direct issue-tracker write access is unavailable, explicitly state that and request/confirm the status move by the human in the same response.

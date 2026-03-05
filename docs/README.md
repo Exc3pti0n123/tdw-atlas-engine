@@ -7,6 +7,8 @@ Use this page as the central navigation hub.
 1. `definitions.md` - canonical terms and wording
 2. `contracts.md` - single source of truth for runtime/public contracts
 3. `system-architecture.md` - complete architecture view
+4. Seed baseline: `../data/seed/atlas.runtime.seed.json` + `../data/seed/atlas.map.seed.json`
+5. Admin dataset catalog: `../data/dataset/*`
 
 ## Architecture Deep Dives
 
@@ -58,3 +60,10 @@ Use this page as the central navigation hub.
 
 1. `../../tdw-core/assets/shared/tdw-logger.js` - shared logger core implementation (`window.TDW.Logger.createScopedLogger(scope)`).
 2. `../assets/js/helpers/atlas-shared.js` - shared normalization helpers (`normalizeBool`, `normalizeCountryCode`, ...).
+
+## Sister Project Docs
+
+1. `../../tdw-core/docs/contracts.md`
+2. `../../tdw-core/docs/system-architecture.md`
+3. `../../tdw-design/docs/contracts.md`
+4. `../../tdw-design/docs/system-architecture.md`

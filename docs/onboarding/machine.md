@@ -15,6 +15,8 @@ This file defines mandatory behavior for AI contributors.
 2. `../templates/module-template-custom.md`
 3. `../../../tdw-core/assets/shared/tdw-logger.js`
 4. `../../assets/js/helpers/atlas-shared.js`
+5. `../../../tdw-core/docs/contracts.md`
+6. `../../../tdw-design/docs/contracts.md`
 
 ## Mandatory Responsibilities
 
@@ -40,9 +42,24 @@ This file defines mandatory behavior for AI contributors.
 - `implemented`
 - `partially tested`
 - `done tested`
-7. Run and report non-UI suite for implementation changes:
+7. Keep Admin GUI isolation:
+- PHP admin code under `includes/admin/*`
+- admin UI assets under `assets/admin/*`
+- no mixing with public runtime route handlers
+8. Keep list-first admin flow contracts stable:
+- `GET /admin/datasets`
+- `POST /admin/maps/create`
+- `POST /admin/maps/bulk-delete`
+- `PUT /admin/maps/{map_key}/general`
+- `GET /admin/maps/{map_key}/countries`
+- `PUT /admin/maps/{map_key}/countries`
+- edit route via `?id=<map_key>`
+9. Keep create flow dataset-driven (`data/dataset/*`) with map-seed materialization (`data/seed/atlas.map.seed.json`).
+10. Run and report non-UI suite for implementation changes:
 - `npm run test:non-ui`
 - reference: `../process/non-ui-testing.md`
+11. After every implementation response, include a concise UI/UX test checklist.
+12. After implementation completion, move related issues to `Implemented` (or explicitly request human move when tracker write access is unavailable).
 
 ## Testing Ownership
 

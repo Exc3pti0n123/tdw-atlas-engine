@@ -27,6 +27,51 @@ function tdw_atlas_rest_bad_request($code, $message) {
   ), 400);
 }
 
+function tdw_atlas_rest_admin_permission($request = null) {
+  if (!is_user_logged_in()) {
+    return new WP_Error(
+      'tdw_atlas_admin_auth_required',
+      'Atlas admin API requires an authenticated WordPress session.',
+      array('status' => 401)
+    );
+  }
+
+  if (!current_user_can(TDW_ATLAS_ADMIN_REQUIRED_CAP)) {
+    return new WP_Error(
+      'tdw_atlas_admin_capability_required',
+      'Atlas admin API requires capability "' . TDW_ATLAS_ADMIN_REQUIRED_CAP . '".',
+      array('status' => 403)
+    );
+  }
+
+  return true;
+}
+
+function tdw_atlas_rest_require_admin_nonce($request) {
+  if (!$request instanceof WP_REST_Request) {
+    return new WP_Error(
+      'tdw_atlas_admin_nonce_request_invalid',
+      'Invalid REST request.',
+      array('status' => 400)
+    );
+  }
+
+  $nonce = (string) $request->get_header('X-WP-Nonce');
+  if ($nonce === '') {
+    $nonce = (string) $request->get_param('_wpnonce');
+  }
+
+  if ($nonce === '' || !wp_verify_nonce($nonce, 'wp_rest')) {
+    return new WP_Error(
+      'tdw_atlas_admin_nonce_invalid',
+      'Missing or invalid REST nonce.',
+      array('status' => 403)
+    );
+  }
+
+  return true;
+}
+
 function tdw_atlas_rest_validate_map_id($value, $field = 'map_id') {
   $map_id = trim((string) $value);
   if (preg_match('/^[a-z0-9_-]{1,64}$/', $map_id) !== 1) {

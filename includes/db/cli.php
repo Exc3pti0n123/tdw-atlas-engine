@@ -11,7 +11,7 @@ if (!defined('WP_CLI') || !WP_CLI) {
  */
 class TDW_Atlas_CLI_Command {
   /**
-   * Reset Atlas DB and reseed from atlas.seed.json.
+   * Reset Atlas DB and reseed from data/seed/atlas.runtime.seed.json + data/seed/atlas.map.seed.json.
    *
    * ## EXAMPLES
    *

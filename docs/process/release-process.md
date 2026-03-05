@@ -14,7 +14,8 @@ Use this runbook for every tagged milestone release (alpha, beta, final).
 1. Confirm issue status and known risks are documented.
 2. Update version strings consistently:
 - `/Users/justin/Local Sites/thedesertwhale/app/public/wp-content/plugins/tdw-atlas-engine/tdw-atlas-engine.php`
-- `/Users/justin/Local Sites/thedesertwhale/app/public/wp-content/plugins/tdw-atlas-engine/atlas.seed.json`
+- `/Users/justin/Local Sites/thedesertwhale/app/public/wp-content/plugins/tdw-atlas-engine/data/seed/atlas.runtime.seed.json`
+- `/Users/justin/Local Sites/thedesertwhale/app/public/wp-content/plugins/tdw-atlas-engine/data/seed/atlas.map.seed.json`
 - `/Users/justin/Local Sites/thedesertwhale/app/public/wp-content/plugins/tdw-atlas-engine/readme.txt` (`Stable tag`, changelog)
 3. Ensure relevant docs/contracts are already updated in the same release branch.
 
@@ -41,9 +42,8 @@ Goal: include only deployment-required files, exclude contributor/process artifa
 2. `includes/`
 3. `assets/`
 4. `data/`
-5. `atlas.seed.json`
-6. `readme.txt`
-7. `LICENSE` (when present)
+5. `readme.txt`
+6. `LICENSE` (when present)
 
 ### Exclude
 

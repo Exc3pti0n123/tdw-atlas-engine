@@ -37,6 +37,11 @@ function tdw_atlas_table_preprocess_part_rules() {
   return $wpdb->prefix . 'tdw_atlas_preprocess_part_rules';
 }
 
+function tdw_atlas_table_country_review() {
+  global $wpdb;
+  return $wpdb->prefix . 'tdw_atlas_country_review';
+}
+
 function tdw_atlas_seed_log($message, $context = array()) {
   $suffix = '';
   if (is_array($context) && $context) {

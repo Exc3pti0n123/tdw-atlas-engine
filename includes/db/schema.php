@@ -14,11 +14,13 @@ function tdw_atlas_db_install_or_upgrade() {
   $grouping_members_table = tdw_atlas_table_grouping_members();
   $whitelist_table = tdw_atlas_table_whitelist_entries();
   $part_rules_table = tdw_atlas_table_preprocess_part_rules();
+  $country_review_table = tdw_atlas_table_country_review();
 
   $sql_maps = "CREATE TABLE {$maps_table} (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     map_key VARCHAR(64) NOT NULL,
     label VARCHAR(191) NOT NULL,
+    description VARCHAR(191) NULL DEFAULT '',
     dataset_key VARCHAR(64) NOT NULL,
     geojson_path TEXT NOT NULL,
     view_key VARCHAR(64) NULL DEFAULT '',
@@ -34,6 +36,8 @@ function tdw_atlas_db_install_or_upgrade() {
     preprocess_config_json LONGTEXT NULL,
     focus_config_json LONGTEXT NULL,
     ui_config_json LONGTEXT NULL,
+    map_options_json LONGTEXT NULL,
+    style_json LONGTEXT NULL,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
     PRIMARY KEY  (id),
@@ -116,6 +120,15 @@ function tdw_atlas_db_install_or_upgrade() {
     KEY map_country (map_key, country_code)
   ) {$charset_collate};";
 
+  $sql_country_review = "CREATE TABLE {$country_review_table} (
+    map_key VARCHAR(64) NOT NULL,
+    country_code CHAR(2) NOT NULL,
+    is_confirmed TINYINT(1) NOT NULL DEFAULT 0,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (map_key, country_code),
+    KEY map_confirmed_idx (map_key, is_confirmed)
+  ) {$charset_collate};";
+
   require_once ABSPATH . 'wp-admin/includes/upgrade.php';
   dbDelta($sql_maps);
   dbDelta($sql_country_catalog);
@@ -124,6 +137,7 @@ function tdw_atlas_db_install_or_upgrade() {
   dbDelta($sql_grouping_members);
   dbDelta($sql_whitelist);
   dbDelta($sql_part_rules);
+  dbDelta($sql_country_review);
 
   if (!empty($wpdb->last_error)) {
     throw new RuntimeException('DB schema install/upgrade failed: ' . $wpdb->last_error);
@@ -131,22 +145,22 @@ function tdw_atlas_db_install_or_upgrade() {
 }
 
 function tdw_atlas_db_is_seed_missing() {
-  global $wpdb;
-
-  $maps_table = tdw_atlas_table_maps();
-  $catalog_table = tdw_atlas_table_country_catalog();
-
-  $maps_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$maps_table}");
-  if (!empty($wpdb->last_error)) {
-    throw new RuntimeException('Failed to read maps table for seed check: ' . $wpdb->last_error);
+  $settings = get_option(TDW_ATLAS_OPTION_SETTINGS, null);
+  if (!is_array($settings)) {
+    return true;
   }
 
-  $catalog_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$catalog_table}");
-  if (!empty($wpdb->last_error)) {
-    throw new RuntimeException('Failed to read country catalog table for seed check: ' . $wpdb->last_error);
+  $normalized_vendor = tdw_atlas_normalize_vendor($settings['vendor'] ?? array(), $settings['vendor'] ?? array());
+  if (is_wp_error($normalized_vendor)) {
+    return true;
   }
 
-  return ($maps_count <= 0 || $catalog_count <= 0);
+  $system = get_option(TDW_ATLAS_OPTION_SYSTEM, null);
+  if (!is_array($system)) {
+    return true;
+  }
+
+  return false;
 }
 
 function tdw_atlas_activate() {
