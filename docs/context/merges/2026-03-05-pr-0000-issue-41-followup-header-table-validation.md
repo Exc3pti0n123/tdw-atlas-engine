@@ -29,3 +29,4 @@
 
 1. Issue: `#41`
 2. PR: `PR-0000`
+3. ADR: No ADR required (UI/validation follow-up only)
