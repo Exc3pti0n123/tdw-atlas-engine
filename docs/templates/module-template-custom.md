@@ -94,4 +94,6 @@ if (typeof api.exampleFunction !== 'function') api.exampleFunction = exampleFunc
 2. Do not add custom sections to `MODULE INIT` or `AUTO-RUN`.
 3. Any new custom section must be listed in the module header comment.
 4. If the module does not need custom sections, use `docs/templates/module-template.md`.
-5. JSDoc is mandatory for every function (including public API methods).
+5. If a section is intentionally empty, keep the section header and write `n/a`.
+6. JSDoc is mandatory for every function (including public API methods).
+7. Include `@throws` when relevant.

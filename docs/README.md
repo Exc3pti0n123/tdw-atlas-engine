@@ -4,9 +4,10 @@ Use this page as the central navigation hub.
 
 ## Core
 
-1. `definitions.md` - canonical terms and wording
-2. `contracts.md` - single source of truth for runtime/public contracts
-3. `system-architecture.md` - complete architecture view
+1. `project-kickoff.md` - project source-of-truth baseline for governance, scope, and process
+2. `definitions.md` - canonical terms and wording
+3. `contracts.md` - single source of truth for runtime/public contracts
+4. `system-architecture.md` - complete architecture view
 
 ## Architecture Deep Dives
 
@@ -33,19 +34,21 @@ Use this page as the central navigation hub.
 ## Process
 
 1. `process/merge-strategy.md`
-2. `process/release-checklist.md`
-3. `process/release-process.md`
-4. `process/quick-checklists.md`
-5. `process/non-ui-testing.md`
-6. `process/code-health-report-v0.2.0-alpha2.md`
-7. `process/code-health-metrics-v0.2.0-alpha2.json`
-8. `../SECURITY.md`
+2. `process/engineering-rules.md`
+3. `process/release-checklist.md`
+4. `process/release-process.md`
+5. `process/quick-checklists.md`
+6. `process/non-ui-testing.md`
+7. `process/code-health-report-v0.2.0-alpha2.md`
+8. `process/code-health-metrics-v0.2.0-alpha2.json`
+9. `../SECURITY.md`
 
 ## Decision and Context Tracking
 
 1. `adr/README.md`
 2. `context/README.md`
 3. `context/merged-branches.md`
+4. `context/issues-overview.md`
 
 ## Templates
 
@@ -53,6 +56,7 @@ Use this page as the central navigation hub.
 2. `templates/module-template-custom.md`
 3. `templates/context-capsule-template.md`
 4. `templates/project-kickoff-template.md`
+5. `templates/test-case-template.md`
 
 ## Shared Helpers (AI/Contributor Quick Find)
 

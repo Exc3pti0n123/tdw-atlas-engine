@@ -70,10 +70,12 @@ if (typeof api.exampleFunction !== 'function') api.exampleFunction = exampleFunc
 - Keep `MODULE INIT` minimal: no network, no DOM scanning, no heavy logic.
 - Put all behavior in `FUNCTIONS`; only expose what is needed in `PUBLIC API`.
 - `AUTO-RUN` is optional and should be used only for required startup wiring.
+- If a section is intentionally empty, keep the section header and write `n/a`.
 - JSDoc is mandatory for every function:
   - top-level function declarations
   - internal helper functions
   - public API methods
+- Include `@throws` when relevant.
 - Logger boilerplate is mandatory in this compact form:
   - `const { dlog = () => {}, dwarn = () => {}, derror = (...args) => console.error('[TDW ATLAS FATAL]', \`[\${SCOPE}]\`, ...args) } = window.TDW?.Logger?.createScopedLogger?.(SCOPE) || {};`
 - Direct `window.TDW._logger.log/warn/error` usage is reserved for:

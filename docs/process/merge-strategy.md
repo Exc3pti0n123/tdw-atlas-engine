@@ -15,6 +15,7 @@
 1. Changed files are only docs/process/onboarding/templates/context/ADR files.
 2. Docs checklist in PR is complete.
 3. Green checks pass.
+4. If architecture was considered but unchanged, the PR states `No ADR required` explicitly.
 
 ## Green Checks Definition
 
@@ -33,3 +34,12 @@ Current enforcement is checklist-based.
 A separate follow-up issue can introduce hard CI gates that block merges on missing required docs updates:
 
 - `#25 process: add hard CI gate for required docs/ADR/context artifacts`
+
+## Epic Initialization Rule
+
+Every new Atlas epic or project-scale effort starts with:
+
+1. a requirements document
+2. a specification document
+3. issue split
+4. implementation
